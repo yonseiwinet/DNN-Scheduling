@@ -49,7 +49,7 @@ Most of the code is written in python, but the high-complexity functions such as
 
 ## How to run
 #### 1. Build C++ functions
->  python3 build_script.py build_ext --inplace
+>  python3 build_script.py build_ext --inplace 
 
 #### 2. Run the test script
 >  sh ./auto_test.sh  
