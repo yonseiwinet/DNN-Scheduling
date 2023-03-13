@@ -1,6 +1,7 @@
 from common import *
 from models import AlexNet
-import cv2, logging
+import cv2
+import logging
 
 
 
@@ -9,13 +10,13 @@ def data_generator(args, send_data_list, send_data_lock):
     vid = cv2.VideoCapture(args.data_path+args.video_name)
     fps = vid.get(cv2.CAP_PROP_FPS)
     delay = 10000 # int(600/fps)
-    roi_mask = cv2.imread(args.data_path+args.roi_name, cv2.IMREAD_UNCHANGED)
-    roi_mask = cv2.resize(roi_mask, args.resolution, interpolation=cv2.INTER_CUBIC)
+    # roi_mask = cv2.imread(args.data_path+args.roi_name, cv2.IMREAD_UNCHANGED)
+    # roi_mask = cv2.resize(roi_mask, args.resolution, interpolation=cv2.INTER_CUBIC)
 
-    p_tag = 1
-    kernel = None
-    backgroundObject = cv2.createBackgroundSubtractorMOG2(history=1000, varThreshold=128, detectShadows=False)
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Resize(size=(227,227),interpolation=0), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    # p_tag = 1
+    # kernel = None
+    # backgroundObject = cv2.createBackgroundSubtractorMOG2(history=1000, varThreshold=128, detectShadows=False)
+    # transform = transforms.Compose([transforms.ToTensor(), transforms.Resize(size=(227,227),interpolation=0), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
     while vid.isOpened():
         _, frame = vid.read()
 
@@ -26,17 +27,17 @@ def data_generator(args, send_data_list, send_data_lock):
         frame = cv2.resize(frame, args.resolution, interpolation=cv2.INTER_CUBIC)
         detected = False
 
-        # calculate the foreground mask
-        took = time.time()
-        foreground_mask = cv2.bitwise_and(frame, frame, mask=roi_mask)
-        foreground_mask = backgroundObject.apply(foreground_mask)
-        _, foreground_mask = cv2.threshold(foreground_mask, 250, 255, cv2.THRESH_BINARY)
-        foreground_mask = cv2.erode(foreground_mask, kernel, iterations=1)
-        foreground_mask = cv2.dilate(foreground_mask, kernel, iterations=10)
-        if args.verbose:
-            print("mask {:.5f} ms".format((time.time() - took) * 1000))
+        # # calculate the foreground mask
+        # took = time.time()
+        # foreground_mask = cv2.bitwise_and(frame, frame, mask=roi_mask)
+        # foreground_mask = backgroundObject.apply(foreground_mask)
+        # _, foreground_mask = cv2.threshold(foreground_mask, 250, 255, cv2.THRESH_BINARY)
+        # foreground_mask = cv2.erode(foreground_mask, kernel, iterations=1)
+        # foreground_mask = cv2.dilate(foreground_mask, kernel, iterations=10)
+        # if args.verbose:
+        #     print("mask {:.5f} ms".format((time.time() - took) * 1000))
 
-        contours, _ = cv2.findContours(foreground_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # contours, _ = cv2.findContours(foreground_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         boxedFrame = frame.copy()
         # loop over each contour found in the frame.
         for cnt in contours:
