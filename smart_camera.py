@@ -30,7 +30,7 @@ def data_generator(args, send_data_list, send_data_lock):
         # # calculate the foreground mask
         took = time.time()
         # foreground_mask = cv2.bitwise_and(frame, frame, mask=roi_mask)
-        foreground_mask = backgroundObject.apply(foreground_mask)
+        foreground_mask = backgroundObject.apply(frame)
         _, foreground_mask = cv2.threshold(foreground_mask, 250, 255, cv2.THRESH_BINARY)
         foreground_mask = cv2.erode(foreground_mask, kernel, iterations=1)
         foreground_mask = cv2.dilate(foreground_mask, kernel, iterations=10)
