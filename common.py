@@ -24,6 +24,7 @@ def str2bool(v):
 
 def bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event):
     while _stop_event.is_set() == False:
+        print(len(proc_schedule_list))
         if len(proc_schedule_list) > 0:
             with proc_schedule_lock:
                 proc_schedule = proc_schedule_list.pop(0)
