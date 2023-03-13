@@ -77,7 +77,7 @@ if __name__ == "__main__":
     parser.add_argument('--master_addr', default='localhost', type=str, help='Master node ip address')
     parser.add_argument('--master_port', default='30000', type=str, help='Master node port')
     parser.add_argument('--rank', default=0, type=int, help='Master node port', required=True)
-    parser.add_argument('--data_path', default='/data/', type=str, help='Image frame data path')
+    parser.add_argument('--data_path', default='~/', type=str, help='Image frame data path')
     parser.add_argument('--video_name', default='vdo.avi', type=str, help='Video file name')
     parser.add_argument('--roi_name', default='roi.jpg', type=str, help='RoI file name')
     parser.add_argument('--num_nodes', default=2, type=int, help='Number of nodes')
@@ -117,10 +117,13 @@ if __name__ == "__main__":
     proc_schedule_lock = threading.Lock()
 
     threading.Thread(target=data_generator, args=(args, send_data_list, send_data_lock)).start()
+    print("Data Gen Thread ready !")
     threading.Thread(target=recv_schedule_thread, args=(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event)).start()
+    print("Schedule Thread ready !")
     threading.Thread(target=recv_thread, args=(args.rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
+    print("Recv Thread ready !")
     threading.Thread(target=send_thread, args=(args.rank, send_schedule_list, send_schedule_lock, send_data_list, send_data_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
-
+    print("Send Thread ready !")
     while _stop_event.is_set() == False:
         inputs, layer_id, p_id, num_outputs = bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event)
         outputs = model(inputs.cuda(), layer_id.cuda()).cpu()
