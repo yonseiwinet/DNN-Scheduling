@@ -125,6 +125,7 @@ if __name__ == "__main__":
     print("Recv Thread ready !")    
     threading.Thread(target=send_thread, args=(args.rank, send_schedule_list, send_schedule_lock, send_data_list, send_data_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
     print("Send Thread ready !")
+    print(_stop_event.is_set())
     while _stop_event.is_set() == False:
         inputs, layer_id, p_id, num_outputs = bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event)
         outputs = model(inputs.cuda(), layer_id.cuda()).cpu()
