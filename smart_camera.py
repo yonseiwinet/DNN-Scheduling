@@ -36,8 +36,9 @@ def data_generator(args, send_data_list, send_data_lock):
         foreground_mask = cv2.dilate(foreground_mask, kernel, iterations=10)
         if args.verbose:
             print("mask {:.5f} ms".format((time.time() - took) * 1000))
-
-        contours, _ = cv2.findContours(foreground_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        output = cv2.findContours(foreground_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        print(output)
+        # contours, _ = cv2.findContours(foreground_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         boxedFrame = frame.copy()
         # loop over each contour found in the frame.
         for cnt in contours:
@@ -77,7 +78,7 @@ if __name__ == "__main__":
     parser.add_argument('--master_addr', default='localhost', type=str, help='Master node ip address')
     parser.add_argument('--master_port', default='30000', type=str, help='Master node port')
     parser.add_argument('--rank', default=0, type=int, help='Master node port', required=True)
-    parser.add_argument('--data_path', default='/root/', type=str, help='Image frame data path')
+    parser.add_argument('--data_path', default='/root/smart-camera/', type=str, help='Image frame data path')
     parser.add_argument('--video_name', default='vdo.avi', type=str, help='Video file name')
     parser.add_argument('--roi_name', default='roi.jpg', type=str, help='RoI file name')
     parser.add_argument('--num_nodes', default=2, type=int, help='Number of nodes')
