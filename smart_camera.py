@@ -36,8 +36,8 @@ def data_generator(args, send_data_list, send_data_lock):
         foreground_mask = cv2.dilate(foreground_mask, kernel, iterations=10)
         if args.verbose:
             print("mask {:.5f} ms".format((time.time() - took) * 1000))
-        _, contours, _ = cv2.findContours(foreground_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        print(contours)
+        contours, _ = cv2.findContours(foreground_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
         boxedFrame = frame.copy()
         # loop over each contour found in the frame.
         for cnt in contours:
