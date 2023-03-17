@@ -85,6 +85,7 @@ def recv_thread(rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, r
 
 def send_thread(rank, send_schedule_list, send_schedule_lock, send_data_list, send_data_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event):
     while _stop_event.is_set() == False:
+        print(len(send_data_list))
         if len(send_data_list) > 0:
             with send_data_lock:
                 pred_id, num_outputs, outputs = send_data_list.pop(0)
