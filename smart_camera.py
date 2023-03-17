@@ -24,6 +24,7 @@ def data_generator(args, send_data_list, send_data_lock):
             logging.warning("Empty Frame")
             time.sleep(0.1)
             continue
+        """
         frame = cv2.resize(frame, args.resolution, interpolation=cv2.INTER_CUBIC)
         detected = False
 
@@ -56,11 +57,11 @@ def data_generator(args, send_data_list, send_data_lock):
             foregroundPart = cv2.bitwise_and(frame, frame, mask=foreground_mask)
             cv2.imshow('foregroundPart', foregroundPart)
             cv2.imshow('boxedFrame', boxedFrame)
-
+        """
         # send image info to the master and recv scheduling decision
         send_request()
         with send_data_lock:
-            send_data_list.append((p_tag-1, num_pieces, transform(boxedFrame).unsqueeze(0)))
+            send_data_list.append((p_tag-1, num_pieces, transform(frame).unsqueeze(0)))
             p_tag += num_partitions + 3
         time.sleep(1)
 
