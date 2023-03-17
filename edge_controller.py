@@ -8,7 +8,7 @@ server_mapping = {0: 1, 1: 0}
 
 
 def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event):
-    with open("outputs/net_manager_backup", "rb") as fp:
+    with open("net_manager_backup", "rb") as fp:
         net_manager = pickle.load(fp)
         print("net manager load")
     dataset = DAGDataSet(num_timeslots=1, num_services=1, net_manager=net_manager, apply_partition="horizontal", graph_coarsening=True)
