@@ -61,11 +61,9 @@ def data_generator(args, send_data_list, send_data_lock):
         """
         # send image info to the master and recv scheduling decision
         send_request()
-        print("Send : ",frame)
         with send_data_lock:
             send_data_list.append((p_tag-1, num_pieces, transform(frame).unsqueeze(0)))
             p_tag += num_partitions + 3
-            print("send done !!")
         time.sleep(1)
 
         if cv2.waitKey(delay) == ord('q'):
