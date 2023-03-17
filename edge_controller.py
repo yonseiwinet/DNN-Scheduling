@@ -128,9 +128,7 @@ if __name__ == "__main__":
     print("Send Thread ready !")
     print(_stop_event.is_set())
     while _stop_event.is_set() == False:
-        print(1)
         inputs, layer_id, p_id, num_outputs = bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event)
-        print(2)
         outputs = model(inputs.cuda(), layer_id.cuda()).cpu()
         print(":::::outputs", outputs.shape, layer_id, num_outputs)
         with send_data_lock:
