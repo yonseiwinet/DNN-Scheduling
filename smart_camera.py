@@ -24,8 +24,9 @@ def data_generator(args, send_data_list, send_data_lock):
             logging.warning("Empty Frame")
             time.sleep(0.1)
             continue
-        """
+        
         frame = cv2.resize(frame, args.resolution, interpolation=cv2.INTER_CUBIC)
+        """
         detected = False
 
         # # calculate the foreground mask
