@@ -25,8 +25,10 @@ def str2bool(v):
 def bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event):
     while _stop_event.is_set() == False:
         if len(proc_schedule_list) > 0:
+            print("proc lock wait")
             with proc_schedule_lock:
                 proc_schedule = proc_schedule_list.pop(0)
+            print("proc lock done")
             layer_id = proc_schedule[0]
             num_inputs = proc_schedule[1].item()
             num_outputs = proc_schedule[2].item()
@@ -34,8 +36,10 @@ def bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedul
             start_tag = proc_schedule[12].item()
             data_list = []
             # print("(bring data) num_inputs", num_inputs, layer_id, start_tag)
+            print("proc input wait")
             while recv_data_queue.qsize() < num_inputs:
                 time.sleep(0.001) # wait for data recv
+            print("proc input done")
             for i in range(num_inputs):
                 with recv_data_lock:
                     tag, data, job = recv_data_queue.get()
@@ -130,21 +134,14 @@ def recv_schedule_thread(recv_schedule_list, recv_schedule_lock, send_schedule_l
     while _stop_event.is_set() == False:
         schedule = torch.empty(len(schedule_shape), dtype=torch.int32)
         dist.recv(tensor=schedule, src=0, tag=SCHEDULE_TAG)
-        print("recv schedule !")
         if schedule[5] >= 0:
             if schedule[13] == True:
-                print("wait proc lock")
                 with proc_schedule_lock:
-                    print("proc")
                     proc_schedule_list.append(schedule)
-            print("wait recv lock")
             with recv_schedule_lock:
-                print("recv")
                 recv_schedule_list.append(schedule)
         elif schedule[6] >= 0:
-            print("wait send lock")
             with send_schedule_lock:
-                print("send")
                 send_schedule_list.append(schedule)
         # print("schedule queue length", len(recv_schedule_list), len(send_schedule_list))
 
