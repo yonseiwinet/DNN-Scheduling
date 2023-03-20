@@ -4,7 +4,7 @@ from dag_data_generator import DAGDataSet
 from algorithms.Greedy import HEFT, Greedy
 
 
-server_mapping = {0: 4, 4: 0}
+server_mapping = None
 
 
 def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event):
@@ -99,6 +99,7 @@ if __name__ == "__main__":
     # torch.backends.cudnn.benchmark = True
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     torch.cuda.set_per_process_memory_fraction(fraction=args.vram_limit, device=device)
+    server_mapping = {0: args.num_nodes, args.num_nodes: 0}
     print(device, torch.cuda.get_device_name(0))
 
     # model loading
