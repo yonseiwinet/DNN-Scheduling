@@ -133,13 +133,16 @@ def recv_schedule_thread(recv_schedule_list, recv_schedule_lock, send_schedule_l
         print("recv schedule !")
         if schedule[5] >= 0:
             if schedule[13] == True:
+                print("wait proc lock")
                 with proc_schedule_lock:
                     print("proc")
                     proc_schedule_list.append(schedule)
+            print("wait recv lock")
             with recv_schedule_lock:
                 print("recv")
                 recv_schedule_list.append(schedule)
         elif schedule[6] >= 0:
+            print("wait send lock")
             with send_schedule_lock:
                 print("send")
                 send_schedule_list.append(schedule)
