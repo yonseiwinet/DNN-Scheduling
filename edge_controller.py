@@ -44,9 +44,9 @@ def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_s
                     src = input_src
                     pred_id = -1
                 else:
-                    src = server_mapping[server[next(i for i, l in enumerate(partitions) if l.layer_name == pred)]]
+                    src = server[next(i for i, l in enumerate(partitions) if l.layer_name == pred)]
                     pred_id = next(i for i, l in enumerate(partitions) if l.layer_name == pred)
-                dst = server_mapping[server[p_id]]
+                dst = server[p_id]
                 schedule = torch.tensor([dataset.partition_layer_map[p_id], len(p.input_slicing), len(p.successors), p_tag+pred_id, p_tag+p_id, src, dst, p.input_height, p.input_width, p.input_channel, slicing_index[0], slicing_index[1], tag, proc_flag], dtype=torch.int32)
                 # print("schedule", schedule, pred_id, p_id)
                 # dst는 데이터를 받는 역할을 함
@@ -100,7 +100,6 @@ if __name__ == "__main__":
     # torch.backends.cudnn.benchmark = True
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     torch.cuda.set_per_process_memory_fraction(fraction=args.vram_limit, device=device)
-    server_mapping = {0: args.num_servers, args.num_servers: 0}
     print(device, torch.cuda.get_device_name(0))
 
     # model loading
