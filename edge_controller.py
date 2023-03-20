@@ -17,7 +17,7 @@ def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_s
         dataset = DAGDataSet(num_timeslots=1, num_services=1, apply_partition="horizontal", graph_coarsening=True)
         with open("net_manager_backup", "wb") as fp:
             pickle.dump(dataset.system_manager.net_manager, fp)
-    num_servers = args.num_nodes-1
+    num_servers = args.num_servers
     algorithm = HEFT(dataset=dataset)
     algorithm.rank = "rank_d"
     algorithm.server_lst = list(dataset.system_manager.edge.keys()) + list(dataset.system_manager.request.keys())[:num_servers]
@@ -91,6 +91,7 @@ if __name__ == "__main__":
     parser.add_argument('--video_name', default='vdo.avi', type=str, help='Video file name')
     parser.add_argument('--roi_name', default='roi.jpg', type=str, help='RoI file name')
     parser.add_argument('--num_nodes', default=5, type=int, help='Number of nodes')
+    parser.add_argument('--num_servers', default=4, type=int, help='Number of jetson servers')
     parser.add_argument('--resolution', default=(854, 480), type=tuple, help='Image resolution')
     parser.add_argument('--verbose', default=False, type=str2bool, help='If you want to print debug messages, set True')
     args = parser.parse_args()
@@ -99,7 +100,7 @@ if __name__ == "__main__":
     # torch.backends.cudnn.benchmark = True
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     torch.cuda.set_per_process_memory_fraction(fraction=args.vram_limit, device=device)
-    server_mapping = {0: args.num_nodes, args.num_nodes: 0}
+    server_mapping = {0: args.num_servers, args.num_servers: 0}
     print(device, torch.cuda.get_device_name(0))
 
     # model loading
