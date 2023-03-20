@@ -37,7 +37,7 @@ def bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedul
             data_list = []
             # print("(bring data) num_inputs", num_inputs, layer_id, start_tag)
             print("bring_data : wait enough data")
-            while recv_data_queue.qsize() < num_inputs:
+            while recv_data_queue.qsize() < num_inputs:         ##################3
                 time.sleep(0.001) # wait for data recv
             print("bring_data : done enough data")
             for i in range(num_inputs):
@@ -51,7 +51,9 @@ def bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedul
                 data_list.append(data)
                 # print("(bring data)", tag, "wait")
                 if job != None:
+                    print("wait join")
                     job.join()
+                    print("done join")
             print([d.shape for d in data_list])
             # print(torch.cat(data_list, dim=-1).shape)
             return torch.cat(data_list, dim=-1), layer_id, p_id, num_outputs
@@ -72,7 +74,7 @@ def recv_thread(rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, r
             input_height = schedule[11] - schedule[10] + 1
             data = torch.empty(size=(1, input_channel, input_width, input_height))
             if src == rank: # recv/irecv는 자기자신에게 보낼경우 segfault남.
-                print("recv_thread : wait data")
+                print("recv_thread : wait data")            ################
                 while len(internal_data_list) == 0:
                     time.sleep(0.001) # wait for data recv
                 print("recv_thread : done data")
