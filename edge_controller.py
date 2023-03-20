@@ -8,10 +8,16 @@ server_mapping = {0: 1, 1: 0}
 
 
 def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event):
-    with open("net_manager_backup", "rb") as fp:
-        net_manager = pickle.load(fp)
-        print("net manager load")
-    dataset = DAGDataSet(num_timeslots=1, num_services=1, net_manager=net_manager, apply_partition="horizontal", graph_coarsening=True)
+    try:
+        with open("/outputs/net_manager_backup", "rb") as fp:
+            net_manager = pickle.load(fp)
+            print("net manager load")
+        dataset = DAGDataSet(num_timeslots=1, num_services=1, net_manager=net_manager, apply_partition="horizontal", graph_coarsening=True)
+    except:
+        os.mkdir("outputs")
+        dataset = DAGDataSet(num_timeslots=1, num_services=1, apply_partition="horizontal", graph_coarsening=True)
+        with open("outputs/net_manager_backup", "wb") as fp:
+            pickle.dump(dataset.system_manager.net_manager, fp)
     num_servers = 1
     algorithm = HEFT(dataset=dataset)
     algorithm.rank = "rank_d"
@@ -121,12 +127,8 @@ if __name__ == "__main__":
     proc_schedule_lock = threading.Lock()
 
     threading.Thread(target=scheduler, args=(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event)).start()
-    print("Scheduler Thread ready !")
     threading.Thread(target=recv_thread, args=(args.rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
-    print("Recv Thread ready !")    
     threading.Thread(target=send_thread, args=(args.rank, send_schedule_list, send_schedule_lock, send_data_list, send_data_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
-    print("Send Thread ready !")
-    print(_stop_event.is_set())
     while _stop_event.is_set() == False:
         inputs, layer_id, p_id, num_outputs = bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event)
         outputs = model(inputs.cuda(), layer_id.cuda()).cpu()

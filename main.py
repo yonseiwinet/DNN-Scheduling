@@ -71,7 +71,6 @@ if __name__=="__main__":
             net_manager = pickle.load(fp)
         test_dataset = DAGDataSet(num_timeslots=1, num_services=test_num_services, net_manager=net_manager, apply_partition="horizontal", graph_coarsening=True)
     except:
-        print("except")
         test_dataset = DAGDataSet(num_timeslots=1, num_services=test_num_services, apply_partition="horizontal", graph_coarsening=True)
         with open("outputs/net_manager_backup", "wb") as fp:
             pickle.dump(test_dataset.system_manager.net_manager, fp)
