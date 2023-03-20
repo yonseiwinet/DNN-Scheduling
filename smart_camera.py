@@ -60,10 +60,9 @@ def data_generator(args, send_data_list, send_data_lock):
             cv2.imshow('boxedFrame', boxedFrame)
         """
         # send image info to the master and recv scheduling decision
-        send_request()
+        p_tag = send_request()
         #print("data_generator : wait send data lock")
         with send_data_lock:
-            p_tag = recv_partition_tag()
             send_data_list.append((p_tag, num_pieces, transform(frame).unsqueeze(0)))
         #print("data_generator : done send data lock")
         time.sleep(1)
