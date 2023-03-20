@@ -18,10 +18,10 @@ def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_s
         with open("net_manager_backup", "wb") as fp:
             pickle.dump(dataset.system_manager.net_manager, fp)
     num_servers = args.num_nodes-1
-    algorithm.server_lst = list(dataset.system_manager.edge.keys()) + list(dataset.system_manager.request.keys())[:num_servers]
-    algorithm.rank = "rank_d"
     algorithm = HEFT(dataset=dataset)
-    
+    algorithm.rank = "rank_d"
+    algorithm.server_lst = list(dataset.system_manager.edge.keys()) + list(dataset.system_manager.request.keys())[:num_servers]
+    print(algorithm.server_lst)
     tag = 1
     p_tag = 1
     partitions = dataset.system_manager.service_set.partitions
