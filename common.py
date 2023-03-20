@@ -147,9 +147,6 @@ def send_thread(rank, send_schedule_list, send_schedule_lock, send_data_list, se
             time.sleep(0.001) # wait for data recv
 
 # smart cameras
-def send_request():
-    request = torch.empty(len(schedule_shape), dtype=torch.int32)
-    dist.send(tensor=request, dst=0, tag=SCHEDULE_TAG)
 
 def recv_schedule_thread(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event):
     while _stop_event.is_set() == False:
@@ -174,19 +171,26 @@ def recv_schedule_thread(recv_schedule_list, recv_schedule_lock, send_schedule_l
             time.sleep(0.001)
         # print("schedule queue length", len(recv_schedule_list), len(send_schedule_list))
 
-def recv_partition_tag():
-    request = torch.empty(1, dtype=torch.int32)
-    dist.recv(tensor=request, src=0, tag=P_SHARE_TAG)
-    return request[0]
-
 # edge server
-def recv_request():
-    request = torch.empty(len(schedule_shape), dtype=torch.int32)
-    return dist.recv(tensor=request, src=None, tag=SCHEDULE_TAG)
-
 def send_schedule(schedule, dst):
     dist.send(tensor=schedule, dst=dst, tag=SCHEDULE_TAG)
 
-def send_partition_tag(p_tag, dst):
-    request = torch.tensor([p_tag],dtype=torch.int32)
-    dist.send(tensor=request, dst=dst, tag=SCHEDULE_TAG)
+
+# smart cameras
+def send_request():
+    request = torch.empty(len(schedule_shape), dtype=torch.int32)
+    dist.send(tensor=request, dst=0, tag=SCHEDULE_TAG)
+    p_tag = torch.empty(2, dtype=torch.int32)
+    dist.recv(tensor=p_tag, src=0, tag=SCHEDULE_TAG_2)
+    print("p_tag", p_tag[0].item())
+    return p_tag[0].item()
+
+# edge server
+def recv_request(p_tag):
+    request = torch.empty(len(schedule_shape), dtype=torch.int32)
+    src = dist.recv(tensor=request, src=None, tag=SCHEDULE_TAG)
+    tag_tensor = torch.empty(2, dtype=torch.int32)
+    tag_tensor[0] = p_tag
+    dist.send(tensor=tag_tensor, dst=src, tag=SCHEDULE_TAG_2)
+    print("p_tag", tag_tensor)
+    return src
