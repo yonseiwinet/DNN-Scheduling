@@ -17,7 +17,7 @@ def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_s
         dataset = DAGDataSet(num_timeslots=1, num_services=1, apply_partition="horizontal", graph_coarsening=True)
         with open("net_manager_backup", "wb") as fp:
             pickle.dump(dataset.system_manager.net_manager, fp)
-    num_servers = 1
+    num_servers = args.num_nodes-1
     algorithm = HEFT(dataset=dataset)
     algorithm.rank = "rank_d"
     algorithm.server_lst = list(dataset.system_manager.request.keys())[:num_servers] + list(dataset.system_manager.edge.keys())
