@@ -415,9 +415,7 @@ class DAGDataSet:
                     net_manager.g_dd[i, j] = net_manager.g_dd[j, i] = 1 # np.random.normal(1.0, 0.2) # random.uniform(1.0, 1.0)
                 net_manager.g_dd[i, i] = 0
             net_manager.cal_b_dd()
-            print(net_manager.B_dd)
-            print(net_manager.g_dd)
-            input()
+            #input()
 
         # init system manager
         system_manager.net_manager = net_manager
