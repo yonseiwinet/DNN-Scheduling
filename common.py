@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 import torch.multiprocessing as mp
 
 SCHEDULE_TAG = 0
-P_SHARE_TAG = (1<<31)-1
+P_SHARE_TAG = 100000000
 num_pieces = 3
 num_partitions = 27
 num_classes = 80
