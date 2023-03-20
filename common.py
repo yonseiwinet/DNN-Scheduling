@@ -169,6 +169,8 @@ def recv_schedule_thread(recv_schedule_list, recv_schedule_lock, send_schedule_l
             with send_schedule_lock:
                 send_schedule_list.append(schedule)
             print("recv_schedule_thread : done send schedule lock")
+        else:
+            time.sleep(0.001)
         # print("schedule queue length", len(recv_schedule_list), len(send_schedule_list))
 
 # edge server
