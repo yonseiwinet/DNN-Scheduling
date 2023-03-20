@@ -128,6 +128,7 @@ def send_request():
 
 def recv_schedule_thread(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event):
     while _stop_event.is_set() == False:
+        print("recv schedule !")
         schedule = torch.empty(len(schedule_shape), dtype=torch.int32)
         dist.recv(tensor=schedule, src=0, tag=SCHEDULE_TAG)
         if schedule[5] >= 0:
