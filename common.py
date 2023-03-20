@@ -104,8 +104,10 @@ def recv_thread(rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, r
 def send_thread(rank, send_schedule_list, send_schedule_lock, send_data_list, send_data_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event):
     while _stop_event.is_set() == False:
         if len(send_data_list) > 0:
+            print("send_thread : wait send data lock")
             with send_data_lock:
                 pred_id, num_outputs, outputs = send_data_list.pop(0)
+            print("send_thread : done send data lock")
             for i in range(num_outputs):
                 idx = None
                 while True:
@@ -120,8 +122,10 @@ def send_thread(rank, send_schedule_list, send_schedule_lock, send_data_list, se
                     #     print("(send_thread) waiting", len(send_schedule_list), pred_id, outputs.shape)
                     #     time.sleep(5)
                 # send_schedule중에 pred_id가 동일한거만 꺼냄
+                print("send_thread : wait send schedule lock")
                 with send_schedule_lock:
                     schedule = send_schedule_list.pop(idx)
+                print("send_thread : done send schedule lock")
                 dst = schedule[6].item()
                 tag = schedule[12].item()
                 slicing_index = (schedule[10].item(), schedule[11].item() + 1)
@@ -131,9 +135,11 @@ def send_thread(rank, send_schedule_list, send_schedule_lock, send_data_list, se
                     data = outputs[:,slicing_index[0]:slicing_index[1]].contiguous()
                 # print("(send_thread) ", data.shape, tag, dst, len(send_data_list))
                 if dst == rank: # send/isend는 자기자신에게 보낼경우 segfault남.
+                    print("send_thread : wait internal data lock")
                     with internal_data_lock:
                         internal_data_list.append((tag, data))
                         # print("(send_thread) ", tag, data.shape)
+                    print("send_thread : done internal data lock")
                 else:
                     threading.Thread(target=dist.send, kwargs={"tensor":data, "dst":dst, "tag":tag}).start()
         else:
@@ -150,13 +156,19 @@ def recv_schedule_thread(recv_schedule_list, recv_schedule_lock, send_schedule_l
         dist.recv(tensor=schedule, src=0, tag=SCHEDULE_TAG)
         if schedule[5] >= 0:
             if schedule[13] == True:
+                print("recv_schedule_thread : wait proc schedule lock")
                 with proc_schedule_lock:
                     proc_schedule_list.append(schedule)
+                print("recv_schedule_thread : done proc schedule lock")
+            print("recv_schedule_thread : wait recv schedule lock")
             with recv_schedule_lock:
                 recv_schedule_list.append(schedule)
+            print("recv_schedule_thread : done recv schedule lock")
         elif schedule[6] >= 0:
+            print("recv_schedule_thread : wait send schedule lock")
             with send_schedule_lock:
                 send_schedule_list.append(schedule)
+            print("recv_schedule_thread : done send schedule lock")
         # print("schedule queue length", len(recv_schedule_list), len(send_schedule_list))
 
 # edge server
