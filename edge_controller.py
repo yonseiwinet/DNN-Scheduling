@@ -4,7 +4,7 @@ from dag_data_generator import DAGDataSet
 from algorithms.Greedy import HEFT, Greedy
 
 
-server_mapping = {0: 1, 1: 0}
+server_mapping = {0: 4, 4: 0}
 
 
 def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event):
