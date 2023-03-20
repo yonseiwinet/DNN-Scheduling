@@ -156,19 +156,19 @@ def recv_schedule_thread(recv_schedule_list, recv_schedule_lock, send_schedule_l
         dist.recv(tensor=schedule, src=0, tag=SCHEDULE_TAG)
         if schedule[5] >= 0:
             if schedule[13] == True:
-                print("recv_schedule_thread : wait proc schedule lock")
+                #print("recv_schedule_thread : wait proc schedule lock")
                 with proc_schedule_lock:
                     proc_schedule_list.append(schedule)
-                print("recv_schedule_thread : done proc schedule lock")
-            print("recv_schedule_thread : wait recv schedule lock")
+                #print("recv_schedule_thread : done proc schedule lock")
+            #print("recv_schedule_thread : wait recv schedule lock")
             with recv_schedule_lock:
                 recv_schedule_list.append(schedule)
-            print("recv_schedule_thread : done recv schedule lock")
+            #print("recv_schedule_thread : done recv schedule lock")
         elif schedule[6] >= 0:
-            print("recv_schedule_thread : wait send schedule lock")
+            #print("recv_schedule_thread : wait send schedule lock")
             with send_schedule_lock:
                 send_schedule_list.append(schedule)
-            print("recv_schedule_thread : done send schedule lock")
+            #print("recv_schedule_thread : done send schedule lock")
         else:
             time.sleep(0.001)
         # print("schedule queue length", len(recv_schedule_list), len(send_schedule_list))
