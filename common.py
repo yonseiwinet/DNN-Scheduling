@@ -54,6 +54,7 @@ def bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedul
 
 def recv_thread(rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event):
     while _stop_event.is_set() == False:
+        print(len(recv_schedule_list))
         if len(recv_schedule_list) > 0:
             with recv_schedule_lock:
                 schedule = recv_schedule_list.pop(0)
