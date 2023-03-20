@@ -24,9 +24,11 @@ def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_s
     tag = 1
     p_tag = 1
     partitions = dataset.system_manager.service_set.partitions
+    print(num_partitions)
     while _stop_event.is_set() == False:
         # request를 반복적으로 받음
         input_src = recv_request()
+        send_partition_tag(p_tag)
         # scheduling 수행
         (([server], [order]), [latency], took) = algorithm.run_algo()
         # partition p를 순서대로

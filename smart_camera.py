@@ -13,7 +13,7 @@ def data_generator(args, send_data_list, send_data_lock):
     # roi_mask = cv2.imread(args.data_path+args.roi_name, cv2.IMREAD_UNCHANGED)
     # roi_mask = cv2.resize(roi_mask, args.resolution, interpolation=cv2.INTER_CUBIC)
 
-    p_tag = 1
+    p_tag = 0
     kernel = None
     backgroundObject = cv2.createBackgroundSubtractorMOG2(history=1000, varThreshold=128, detectShadows=False)
     transform = transforms.Compose([transforms.ToTensor(), transforms.Resize(size=(227,227),interpolation=0), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -63,8 +63,8 @@ def data_generator(args, send_data_list, send_data_lock):
         send_request()
         #print("data_generator : wait send data lock")
         with send_data_lock:
-            send_data_list.append((p_tag-1, num_pieces, transform(frame).unsqueeze(0)))
-            p_tag += num_partitions + 3
+            p_tag += recv_partition_tag()
+            send_data_list.append((p_tag, num_pieces, transform(frame).unsqueeze(0)))
         #print("data_generator : done send data lock")
         time.sleep(1)
 

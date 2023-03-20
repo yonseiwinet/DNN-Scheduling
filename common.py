@@ -6,6 +6,7 @@ import torchvision.transforms as transforms
 import torch.multiprocessing as mp
 
 SCHEDULE_TAG = 0
+P_SHARE_TAG = -1
 num_pieces = 3
 num_partitions = 27
 num_classes = 80
@@ -173,6 +174,11 @@ def recv_schedule_thread(recv_schedule_list, recv_schedule_lock, send_schedule_l
             time.sleep(0.001)
         # print("schedule queue length", len(recv_schedule_list), len(send_schedule_list))
 
+def recv_partition_tag():
+    request = torch.empty(1, dtype=torch.int32)
+    dist.recv(tensor=request, src=None, tag=P_SHARE_TAG)
+    return request.item()
+
 # edge server
 def recv_request():
     request = torch.empty(len(schedule_shape), dtype=torch.int32)
@@ -180,3 +186,7 @@ def recv_request():
 
 def send_schedule(schedule, dst):
     dist.send(tensor=schedule, dst=dst, tag=SCHEDULE_TAG)
+
+def send_partition_tag(p_tag):
+    request = torch.tensor([p_tag],dtype=torch.int32)
+    dist.send(tensor=request, dst=0, tag=SCHEDULE_TAG)
