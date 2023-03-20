@@ -38,7 +38,7 @@ def bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedul
             data_list = []
             # print("(bring data) num_inputs", num_inputs, layer_id, start_tag)
             print("bring_data : wait enough data")
-            while recv_data_queue.qsize() < num_inputs:         ##################3
+            while recv_data_queue.qsize() < num_inputs:         ##################
                 time.sleep(0.001) # wait for data recv
             print("bring_data : done enough data")
             for i in range(num_inputs):
