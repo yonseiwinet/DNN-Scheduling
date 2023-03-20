@@ -46,7 +46,7 @@ def bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedul
                 # print("(bring data)", tag, "wait")
                 if job != None:
                     job.join()
-            # print([d.shape for d in data_list])
+            print([d.shape for d in data_list])
             # print(torch.cat(data_list, dim=-1).shape)
             return torch.cat(data_list, dim=-1), layer_id, p_id, num_outputs
         else:
