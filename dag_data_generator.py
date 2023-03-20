@@ -384,6 +384,11 @@ class DAGDataSet:
         self.num_clouds = len(config.cloud_server_info)
         self.num_servers = self.num_requests + self.num_locals + self.num_edges + self.num_clouds
         id = 0
+        for edge_server in config.edge_server_info:
+            edge_server = deepcopy(edge_server)
+            edge_server['computing_intensity'] = edge_server['computing_intensity']
+            edge[id] = Server(**edge_server, system_manager=system_manager, id=id)
+            id += 1
         for request_device in config.request_device_info:
             request_device = deepcopy(request_device)
             request_device['computing_intensity'] = request_device['computing_intensity']
@@ -393,11 +398,6 @@ class DAGDataSet:
             local_device = deepcopy(local_device)
             local_device['computing_intensity'] = local_device['computing_intensity']
             local[id] = Server(**local_device, system_manager=system_manager, id=id)
-            id += 1
-        for edge_server in config.edge_server_info:
-            edge_server = deepcopy(edge_server)
-            edge_server['computing_intensity'] = edge_server['computing_intensity']
-            edge[id] = Server(**edge_server, system_manager=system_manager, id=id)
             id += 1
         for cloud_server in config.cloud_server_info:
             cloud_server = deepcopy(cloud_server)
