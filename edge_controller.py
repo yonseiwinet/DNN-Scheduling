@@ -46,7 +46,7 @@ def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_s
                 else:
                     src = server[next(i for i, l in enumerate(partitions) if l.layer_name == pred)]
                     pred_id = next(i for i, l in enumerate(partitions) if l.layer_name == pred)
-                    print("pred id : ",pred_id, "p tag : ",p_tag, "i : ", i)
+                    # print("pred id : ",pred_id, "p tag : ",p_tag, "i : ", i)
                 dst = server[p_id]
                 schedule = torch.tensor([dataset.partition_layer_map[p_id], len(p.input_slicing), len(p.successors), p_tag+pred_id, p_tag+p_id, src, dst, p.input_height, p.input_width, p.input_channel, slicing_index[0], slicing_index[1], tag, proc_flag], dtype=torch.int32)
                 #print("schedule", schedule, pred_id, p_id)
