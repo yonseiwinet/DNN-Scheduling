@@ -25,10 +25,10 @@ def str2bool(v):
 def bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event):
     while _stop_event.is_set() == False:
         if len(proc_schedule_list) > 0:
-            print("proc lock wait")
+            print("bring_data : wait proc schedule lock")
             with proc_schedule_lock:
                 proc_schedule = proc_schedule_list.pop(0)
-            print("proc lock done")
+            print("bring_data : done proc schedule lock")
             layer_id = proc_schedule[0]
             num_inputs = proc_schedule[1].item()
             num_outputs = proc_schedule[2].item()
@@ -36,13 +36,15 @@ def bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedul
             start_tag = proc_schedule[12].item()
             data_list = []
             # print("(bring data) num_inputs", num_inputs, layer_id, start_tag)
-            print("proc input wait")
+            print("bring_data : wait enough data")
             while recv_data_queue.qsize() < num_inputs:
                 time.sleep(0.001) # wait for data recv
-            print("proc input done")
+            print("bring_data : done enough data")
             for i in range(num_inputs):
+                print("bring_data : wait recv data lock")
                 with recv_data_lock:
                     tag, data, job = recv_data_queue.get()
+                print("bring_data : done recv data lock")
                 #     print("(bring data) tag", tag)
                 # if tag != start_tag+i:
                 #     print("(bring data) tag err", tag, start_tag+i)
@@ -59,8 +61,10 @@ def bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedul
 def recv_thread(rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event):
     while _stop_event.is_set() == False:
         if len(recv_schedule_list) > 0:
+            print("recv_thread : wait recv schedule lock")
             with recv_schedule_lock:
                 schedule = recv_schedule_list.pop(0)
+            print("recv_thread : done recv schedule lock")
             src = schedule[5].item()
             tag = schedule[12].item()
             input_channel = schedule[9]
@@ -68,20 +72,28 @@ def recv_thread(rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, r
             input_height = schedule[11] - schedule[10] + 1
             data = torch.empty(size=(1, input_channel, input_width, input_height))
             if src == rank: # recv/irecv는 자기자신에게 보낼경우 segfault남.
+                print("recv_thread : wait data")
                 while len(internal_data_list) == 0:
                     time.sleep(0.001) # wait for data recv
+                print("recv_thread : done data")
+                print("recv_thread : wait internal data lock")
                 with internal_data_lock:
                     data_tag, data = internal_data_list.pop(0)
+                print("recv_thread : done internal data lock")
                 # if data_tag != tag:
                 #     print("(recv_thread) tag err", data_tag, tag)
+                print("recv_thread : wait recv data lock")
                 with recv_data_lock:
                     recv_data_queue.put([tag, data, None])
                     # print("(recv_thread) ", tag, data.shape, None)
+                print("recv_thread : done recv data lock")
             else:
+                print("recv_thread : wait recv data lock 2")
                 with recv_data_lock:
                     job = threading.Thread(target=dist.recv, kwargs={"tensor":data, "src":src, "tag":tag})
                     job.start()
                     recv_data_queue.put([tag, data, job])
+                print("recv_thread : done recv data lock 2")
             #         print("(recv_thread) ", tag, data.shape)
             # print("recv_thread recv_data_lock done")
         else:
