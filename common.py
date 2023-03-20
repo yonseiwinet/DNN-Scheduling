@@ -121,7 +121,6 @@ def send_thread(rank, send_schedule_list, send_schedule_lock, send_data_list, se
                         break
                     else:
                         print("(send_thread) waiting", len(send_schedule_list), pred_id, outputs.shape)
-                        print(send_schedule_list[:,3])
                         time.sleep(5)
                 # send_schedule중에 pred_id가 동일한거만 꺼냄
                 #print("send_thread : wait send schedule lock")
