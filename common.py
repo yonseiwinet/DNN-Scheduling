@@ -176,7 +176,7 @@ def recv_schedule_thread(recv_schedule_list, recv_schedule_lock, send_schedule_l
 
 def recv_partition_tag():
     request = torch.empty(1, dtype=torch.int32)
-    dist.recv(tensor=request, src=None, tag=P_SHARE_TAG)
+    dist.recv(tensor=request, src=0, tag=P_SHARE_TAG)
     return request[0]
 
 # edge server
@@ -187,6 +187,6 @@ def recv_request():
 def send_schedule(schedule, dst):
     dist.send(tensor=schedule, dst=dst, tag=SCHEDULE_TAG)
 
-def send_partition_tag(p_tag):
+def send_partition_tag(p_tag, dst):
     request = torch.tensor([p_tag],dtype=torch.int32)
-    dist.send(tensor=request, dst=0, tag=SCHEDULE_TAG)
+    dist.send(tensor=request, dst=dst, tag=SCHEDULE_TAG)
