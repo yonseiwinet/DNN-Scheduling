@@ -177,7 +177,7 @@ def recv_schedule_thread(recv_schedule_list, recv_schedule_lock, send_schedule_l
 def recv_partition_tag():
     request = torch.empty(1, dtype=torch.int32)
     dist.recv(tensor=request, src=None, tag=P_SHARE_TAG)
-    return request.item()
+    return request[0]
 
 # edge server
 def recv_request():
