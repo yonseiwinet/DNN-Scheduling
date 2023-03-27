@@ -19,7 +19,7 @@ def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_s
             pickle.dump(dataset.system_manager.net_manager, fp)
     num_servers = args.num_servers
     algorithm = HEFT(dataset=dataset)
-    algorithm.rank = "rank_d"
+    algorithm.rank = "rank_u"
     algorithm.server_lst = list(dataset.system_manager.edge.keys()) + list(dataset.system_manager.request.keys())[:num_servers]
     tag = 1
     p_tag = 1
