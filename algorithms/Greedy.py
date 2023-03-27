@@ -35,7 +35,7 @@ class HEFT:
         self.num_partitions = len(self.dataset.svc_set.partitions)
 
         self.rank = 'rank_u'
-        self.server_lst = list(self.system_manager.local.keys()) + list(self.system_manager.edge.keys())
+        self.server_lst = list(self.system_manager.request.keys()) + list(self.system_manager.edge.keys())
 
     def run_algo(self):
         timer = time.time()
@@ -97,7 +97,7 @@ class CPOP:
         self.num_servers = dataset.num_servers
         self.num_timeslots = dataset.num_timeslots
         self.num_partitions = len(self.dataset.svc_set.partitions)
-        self.server_lst = list(self.system_manager.local.keys()) + list(self.system_manager.edge.keys())
+        self.server_lst = list(self.system_manager.request.keys()) + list(self.system_manager.edge.keys())
 
     def run_algo(self):
         timer = time.time()
@@ -176,7 +176,7 @@ class PEFT:
         self.num_servers = dataset.num_servers
         self.num_timeslots = dataset.num_timeslots
         self.num_partitions = len(self.dataset.svc_set.partitions)
-        self.server_lst = list(self.system_manager.local.keys()) + list(self.system_manager.edge.keys())
+        self.server_lst = list(self.system_manager.request.keys()) + list(self.system_manager.edge.keys())
 
     def run_algo(self):
         timer = time.time()
@@ -247,7 +247,7 @@ class Greedy:
         self.piece_device_map = np.array([idx for idx, cg in enumerate(self.coarsened_graph) for _ in np.unique(cg)])
 
         self.rank = 'rank_u'
-        self.server_lst = list(self.system_manager.local.keys()) + list(self.system_manager.edge.keys())
+        self.server_lst = list(self.system_manager.request.keys()) + list(self.system_manager.edge.keys())
     
     def get_uncoarsened_x(self, x):
         result = []
@@ -363,7 +363,7 @@ class E_HEFT:
         # alpha_q -> 최대 매칭 파티션 개수 배율
         self.alpha_q = 1.1
         # 실제 사용 서버 목록
-        self.server_lst = list(self.system_manager.local.keys()) + list(self.system_manager.edge.keys())
+        self.server_lst = list(self.system_manager.request.keys()) + list(self.system_manager.edge.keys())
 
     def run_algo(self): 
         timer = time.time()
