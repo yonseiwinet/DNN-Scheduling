@@ -56,6 +56,8 @@ class HEFT:
             x = np.full(shape=(self.num_timeslots, self.num_partitions), fill_value=self.system_manager.cloud_id, dtype=np.int32)
             y = np.array([np.array(sorted(zip(self.system_manager.rank_d, np.arange(self.num_partitions)), reverse=False), dtype=np.int32)[:,1] for _ in range(self.num_timeslots)])
 
+        for s_id in server_lst:
+            print(self.server[s_id].endtime)
         # scheduling
         self.system_manager.init_env()
         for t in range(self.num_timeslots):
