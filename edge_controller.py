@@ -20,7 +20,7 @@ def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_s
     num_servers = args.num_servers
     algorithm = HEFT(dataset=dataset)
     algorithm.rank = "rank_u"
-    algorithm.server_lst = list(dataset.system_manager.edge.keys()) + list(dataset.system_manager.request.keys())[:num_servers]
+    algorithm.server_lst = list(dataset.system_manager.edge.keys()) + list(dataset.system_manager.request.keys())[num_servers:]
     tag = 1
     p_tag = 1
     partitions = dataset.system_manager.service_set.partitions
