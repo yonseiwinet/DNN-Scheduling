@@ -134,4 +134,4 @@ if __name__ == "__main__":
         outputs = model(inputs, layer_id)
         print(":::::outputs", outputs.shape, layer_id, num_outputs)
         with send_data_lock:
-            send_data_queue.append((p_id, num_outputs, outputs))
+            send_data_queue.put((p_id, num_outputs, outputs))
