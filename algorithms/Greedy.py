@@ -35,7 +35,7 @@ class HEFT:
         self.num_partitions = len(self.dataset.svc_set.partitions)
 
         self.rank = 'rank_u'
-        self.server_lst = list(self.system_manager.request.keys()) + list(self.system_manager.edge.keys())
+        self.server_lst = list(self.system_manager.local.keys()) + list(self.system_manager.edge.keys())
 
     def run_algo(self):
         timer = time.time()
@@ -57,6 +57,8 @@ class HEFT:
             y = np.array([np.array(sorted(zip(self.system_manager.rank_d, np.arange(self.num_partitions)), reverse=False), dtype=np.int32)[:,1] for _ in range(self.num_timeslots)])
 
         # scheduling
+        print(self.server_lst)
+        print(x)
         self.system_manager.init_env()
         for t in range(self.num_timeslots):
             finish_time, ready_time = None, None
@@ -86,6 +88,8 @@ class HEFT:
         x = np.array(x, dtype=np.int32)
         y = np.array(y, dtype=np.int32)
         self.system_manager.set_env(deployed_server=x[0], execution_order=y[0])
+        print(self.server_lst)
+        print(x)
         return ((x, y), [np.max(self.system_manager.total_time_dp())], time.time() - timer)
 
 
