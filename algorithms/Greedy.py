@@ -74,6 +74,7 @@ class HEFT:
                     if False not in self.system_manager.constraint_chk():
                         self.system_manager.get_completion_time_partition(top_rank,timer)
                         temp_finish_time = self.system_manager.finish_time[top_rank]
+                        print(top_rank, s_id, temp_finish_time)
                         if temp_finish_time < earliest_finish_time:
                             earliest_finish_time = temp_finish_time
                         else:
