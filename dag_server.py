@@ -93,6 +93,9 @@ class SystemManager():
         self.rank_d_schedule = None
         self.rank_oct_schedule = None
 
+        self.finish_time = None
+        self.ready_time = None
+
     def calculate_schedule(self):
         num_partitions = len(self.service_set.partitions)
 
@@ -187,7 +190,7 @@ class SystemManager():
         node_weight = np.array([self.computation_time_table[partition.total_id][self.deployed_server[partition.total_id]] for partition in self.service_set.partitions])
         edge_weight = dag_completion_time.get_edge_weight(self.num_servers, self.num_servers-2, self.num_servers-1, self.net_manager.B_edge_up, self.net_manager.B_edge_down, self.net_manager.B_cloud_up, self.net_manager.B_cloud_down, self.net_manager.memory_bandwidth, self.deployed_server, self.partition_device_map, self.service_set.input_data_size, self.net_manager.B_dd.flatten())
 
-        self.finish_time = dag_completion_time.get_completion_time(num_partitions, self.deployed_server, self.execution_order, node_weight, edge_weight, self.service_set.partition_predecessor, self.service_set.partition_successor)
+        eft = dag_completion_time.get_completion_time(num_partitions, self.deployed_server, self.execution_order, node_weight, edge_weight, self.service_set.partition_predecessor, self.service_set.partition_successor)
 
         result = np.zeros(len(self.service_set.services), dtype=np.float_)
         start = end = 0
@@ -195,31 +198,54 @@ class SystemManager():
             num_partitions = len(svc.partitions)
             start = end
             end += num_partitions
-            result[svc.id] = max(self.finish_time[start:end])
+            result[svc.id] = max(eft[start:end])
         return result
+    
+    def init_times(self, num_partitions):
+        if self.finish_time is None:
+            self.finish_time = np.zeros(num_partitions)
+        if self.ready_time is None:
+            self.ready_time = np.zeros(num_partitions)
 
-    def get_completion_time_partition(self, p_id, finish_time=None, ready_time=None):
-        num_partitions = len(self.service_set.partitions)
-        if finish_time is None:
-            finish_time = np.zeros(num_partitions)
-        if ready_time is None:
-            ready_time = np.zeros(num_partitions)
-        if ready_time[p_id] == 0 and len(self.service_set.partition_predecessor[p_id]) == 0:
-            ready_time[p_id] = self.net_manager.communication(self.service_set.input_data_size[(p_id,p_id)], self.partition_device_map[p_id], self.deployed_server[p_id])
-        elif ready_time[p_id] == 0:
+    def set_ready_time(self, p_id):
+        if len(self.service_set.partition_predecessor[p_id]) == 0:  # entry node
+            self.ready_time[p_id] += self.net_manager.communication(self.service_set.input_data_size[(p_id,p_id)], self.partition_device_map[p_id], self.deployed_server[p_id])
+        else:
             TR_n = 0.
             for pred_id in self.service_set.partition_predecessor[p_id]:
-                if finish_time[pred_id] > 0:
-                    TF_p = finish_time[pred_id]
+                if self.finish_time[pred_id] > 0:
+                    TF_p = self.finish_time[pred_id]
                 else:
                     raise RuntimeError("Error: predecessor not finish, #{}".format(p_id, pred_id))
                 T_tr = self.net_manager.communication(self.service_set.input_data_size[(pred_id,p_id)], self.deployed_server[pred_id], self.deployed_server[p_id])
                 TR_n = max(TF_p + T_tr, TR_n)
-            ready_time[p_id] = TR_n
+            self.ready_time[p_id] = TR_n
 
-        task_ready_time = max(ready_time[p_id], max(finish_time[np.where(self.deployed_server==self.deployed_server[p_id])]))
-        finish_time[p_id] = task_ready_time + self.service_set.partitions[p_id].get_computation_time()
-        return finish_time, ready_time
+    def get_completion_time_partition(self, p_id, timer):
+        num_partitions = len(self.service_set.partitions)
+        self.init_times(num_partitions)
+        current_time = timer
+        self.finish_time[p_id] = max(0,self.server[self.deployed_server[p_id]].endtime-current_time)
+        self.ready_time[p_id] = max(0,self.server[self.deployed_server[p_id]].endtime-current_time)
+        self.set_ready_time(p_id)
+        task_ready_time = max(self.ready_time[p_id], max(self.finish_time[np.where(self.deployed_server==self.deployed_server[p_id])]))
+        self.finish_time[p_id] = task_ready_time + self.service_set.partitions[p_id].get_computation_time()
+
+    def set_servers_end_time(self,timer):
+        for p_id in range(len(self.service_set.partitions)):
+            self.server[self.deployed_server[p_id]].set_endtime(timer+self.finish_time[p_id])
+
+    def init_servers_end_time(self, server_lst, workloads):
+        print("Init workload remain for servers : ",server_lst)
+        for i, s_id in enumerate(server_lst):
+            self.server[s_id].set_endtime(self.server[s_id].get_endtime() + workloads[i])
+            print("workload remain before scheduling for {} : {} sec".format(s_id,workloads[i]))
+        
+    ## for debug
+    def print_endtime(self, server_lst):
+        for s in server_lst:
+            print(s," end time : ",self.server[s].endtime)
+
 
     def set_servers(self, request, local, edge, cloud):
         self.request = request
@@ -471,6 +497,7 @@ class Server:
         self.id = None
         self.deployed_partition = dict()
         self.deployed_partition_memory = dict()
+        self.endtime = time.time()
         if not hasattr(self, "max_energy"):  # max battery
             self.max_energy = 10.
         if not hasattr(self, "cur_energy"):  # current battery
@@ -486,6 +513,13 @@ class Server:
 
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+    def get_endtime(self):
+        return self.endtime
+
+    def set_endtime(self,endtime):
+        if self.endtime < endtime:
+            self.endtime = endtime
 
     def reset(self):
         self.free()
