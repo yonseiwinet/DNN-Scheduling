@@ -24,7 +24,6 @@ def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_s
     tag = 1
     p_tag = 1
     partitions = dataset.system_manager.service_set.partitions
-    print(num_partitions)
     while _stop_event.is_set() == False:
         # request를 반복적으로 받음
         input_src = recv_request(p_tag)
@@ -116,7 +115,7 @@ if __name__ == "__main__":
     _stop_event = threading.Event()
     recv_data_queue = queue.PriorityQueue()
     recv_data_lock = threading.Lock()
-    send_data_list = []
+    send_data_queue = queue.PriorityQueue()
     send_data_lock = threading.Lock()
     internal_data_list = []
     internal_data_lock = threading.Lock()
@@ -129,10 +128,10 @@ if __name__ == "__main__":
 
     threading.Thread(target=scheduler, args=(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event)).start()
     threading.Thread(target=recv_thread, args=(args.rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
-    threading.Thread(target=send_thread, args=(args.rank, send_schedule_list, send_schedule_lock, send_data_list, send_data_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
+    threading.Thread(target=send_thread, args=(args.rank, send_schedule_list, send_schedule_lock, send_data_queue, send_data_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
     while _stop_event.is_set() == False:
         inputs, layer_id, p_id, num_outputs = bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event)
         outputs = model(inputs, layer_id)
         print(":::::outputs", outputs.shape, layer_id, num_outputs)
         with send_data_lock:
-            send_data_list.append((p_id, num_outputs, outputs))
+            send_data_queue.append((p_id, num_outputs, outputs))

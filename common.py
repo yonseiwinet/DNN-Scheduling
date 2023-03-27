@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 import torch.multiprocessing as mp
 
 SCHEDULE_TAG = 0
-SCHEDULE_TAG_2 = 500000000
+SCHEDULE_TAG_2 = 2100000000
 num_pieces = 3
 num_partitions = 27
 num_classes = 80
@@ -26,36 +26,34 @@ def str2bool(v):
 def bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event):
     while _stop_event.is_set() == False:
         if len(proc_schedule_list) > 0:
-            print("bring_data : wait proc schedule lock")
             with proc_schedule_lock:
                 proc_schedule = proc_schedule_list.pop(0)
-            print("bring_data : done proc schedule lock")
             layer_id = proc_schedule[0]
             num_inputs = proc_schedule[1].item()
             num_outputs = proc_schedule[2].item()
             p_id = proc_schedule[4].item()
-            start_tag = proc_schedule[12].item()
+            tag = proc_schedule[12].item()
             data_list = []
-            # print("(bring data) num_inputs", num_inputs, layer_id, start_tag)
-            print("bring_data : wait enough data")
-            while recv_data_queue.qsize() < num_inputs:         ##################
-                time.sleep(0.001) # wait for data recv
-            print("bring_data : done enough data")
+            # print("(bring data) num_inputs", num_inputs, layer_id, tag)
+
+            src = proc_schedule[5].item()
+            tag = proc_schedule[12].item()
+            input_channel = proc_schedule[9]
+            input_width = proc_schedule[8]
+            input_height = proc_schedule[11] - proc_schedule[10] + 1
             for i in range(num_inputs):
-                print("bring_data : wait recv data lock")
+                while recv_data_queue.qsize() == 0 or recv_data_queue.queue[0][0] != tag:
+                    time.sleep(0.001) # wait for data recv
                 with recv_data_lock:
                     tag, data, job = recv_data_queue.get()
-                print("bring_data : done recv data lock")
-                #     print("(bring data) tag", tag)
-                # if tag != start_tag+i:
-                #     print("(bring data) tag err", tag, start_tag+i)
+                # print("p_id", p_id, "src", src, "tag", tag, data.shape, num_inputs)
+                # we calculate the schedule in order of p_id and tag, we can just merge in numeric order
+                tag += 1
                 data_list.append(data)
                 # print("(bring data)", tag, "wait")
                 if job != None:
-                    print("wait join")
                     job.join()
-                    print("done join")
-            print([d.shape for d in data_list])
+            # print(layer_id.item(), [d.shape for d in data_list])
             # print(torch.cat(data_list, dim=-1).shape)
             return torch.cat(data_list, dim=-1), layer_id, p_id, num_outputs
         else:
@@ -64,10 +62,8 @@ def bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedul
 def recv_thread(rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event):
     while _stop_event.is_set() == False:
         if len(recv_schedule_list) > 0:
-            print("recv_thread : wait recv schedule lock")
             with recv_schedule_lock:
                 schedule = recv_schedule_list.pop(0)
-            print("recv_thread : done recv schedule lock")
             src = schedule[5].item()
             tag = schedule[12].item()
             input_channel = schedule[9]
@@ -75,58 +71,44 @@ def recv_thread(rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, r
             input_height = schedule[11] - schedule[10] + 1
             data = torch.empty(size=(1, input_channel, input_width, input_height))
             if src == rank: # recv/irecv는 자기자신에게 보낼경우 segfault남.
-                print("recv_thread : wait data")            ################
                 while len(internal_data_list) == 0:
                     time.sleep(0.001) # wait for data recv
-                print("recv_thread : done data")
-                print("recv_thread : wait internal data lock")
                 with internal_data_lock:
-                    data_tag, data = internal_data_list.pop(0)
-                print("recv_thread : done internal data lock")
+                    tag, data = internal_data_list.pop(0)
                 # if data_tag != tag:
                 #     print("(recv_thread) tag err", data_tag, tag)
-                print("recv_thread : wait recv data lock")
                 with recv_data_lock:
                     recv_data_queue.put([tag, data, None])
                     # print("(recv_thread) ", tag, data.shape, None)
-                print("recv_thread : done recv data lock")
             else:
-                print("recv_thread : wait recv data lock 2")
                 with recv_data_lock:
                     job = threading.Thread(target=dist.recv, kwargs={"tensor":data, "src":src, "tag":tag})
                     job.start()
                     recv_data_queue.put([tag, data, job])
-                print("recv_thread : done recv data lock 2")
             #         print("(recv_thread) ", tag, data.shape)
             # print("recv_thread recv_data_lock done")
         else:
             time.sleep(0.001)
 
-def send_thread(rank, send_schedule_list, send_schedule_lock, send_data_list, send_data_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event):
+def send_thread(rank, send_schedule_list, send_schedule_lock, send_data_queue, send_data_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event):
     while _stop_event.is_set() == False:
-        if len(send_data_list) > 0:
-            #print("send_thread : wait send data lock")
+        if send_data_queue.qsize() > 0 and len(send_schedule_list) > 0:
             with send_data_lock:
-                pred_id, num_outputs, outputs = send_data_list.pop(0)
-            #print("send_thread : done send data lock")
+                pred_id, num_outputs, outputs = send_data_queue.get()
             for i in range(num_outputs):
                 idx = None
                 while True:
                     for i, s in enumerate(send_schedule_list):
                         if s[3].item() == pred_id:
                             idx = i
-                            # print("(send_thread) send", s)
                             break
                     if idx != None:
                         break
                     else:
-                        print("(send_thread) waiting", len(send_schedule_list), pred_id, outputs.shape)
-                        time.sleep(5)
+                        time.sleep(0.001)
                 # send_schedule중에 pred_id가 동일한거만 꺼냄
-                #print("send_thread : wait send schedule lock")
                 with send_schedule_lock:
                     schedule = send_schedule_list.pop(idx)
-                #print("send_thread : done send schedule lock")
                 dst = schedule[6].item()
                 tag = schedule[12].item()
                 slicing_index = (schedule[10].item(), schedule[11].item() + 1)
@@ -134,19 +116,15 @@ def send_thread(rank, send_schedule_list, send_schedule_lock, send_data_list, se
                     data = outputs[:,:,:,slicing_index[0]:slicing_index[1]].contiguous()
                 elif outputs.dim() == 2:
                     data = outputs[:,slicing_index[0]:slicing_index[1]].contiguous()
-                # print("(send_thread) ", data.shape, tag, dst, len(send_data_list))
+                # print("(send_thread) ", data.shape, tag, dst, len(send_data_queue))
                 if dst == rank: # send/isend는 자기자신에게 보낼경우 segfault남.
-                    #print("send_thread : wait internal data lock")
                     with internal_data_lock:
                         internal_data_list.append((tag, data))
                         # print("(send_thread) ", tag, data.shape)
-                    #print("send_thread : done internal data lock")
                 else:
                     threading.Thread(target=dist.send, kwargs={"tensor":data, "dst":dst, "tag":tag}).start()
         else:
             time.sleep(0.001) # wait for data recv
-
-# smart cameras
 
 def recv_schedule_thread(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event):
     while _stop_event.is_set() == False:
@@ -154,27 +132,17 @@ def recv_schedule_thread(recv_schedule_list, recv_schedule_lock, send_schedule_l
         dist.recv(tensor=schedule, src=0, tag=SCHEDULE_TAG)
         if schedule[5] >= 0:
             if schedule[13] == True:
-                #print("recv_schedule_thread : wait proc schedule lock")
                 with proc_schedule_lock:
                     proc_schedule_list.append(schedule)
-                #print("recv_schedule_thread : done proc schedule lock")
-            #print("recv_schedule_thread : wait recv schedule lock")
             with recv_schedule_lock:
                 recv_schedule_list.append(schedule)
-            #print("recv_schedule_thread : done recv schedule lock")
         elif schedule[6] >= 0:
-            #print("recv_schedule_thread : wait send schedule lock")
             with send_schedule_lock:
                 send_schedule_list.append(schedule)
-            #print("recv_schedule_thread : done send schedule lock")
-        else:
-            time.sleep(0.001)
         # print("schedule queue length", len(recv_schedule_list), len(send_schedule_list))
 
-# edge server
 def send_schedule(schedule, dst):
     dist.send(tensor=schedule, dst=dst, tag=SCHEDULE_TAG)
-
 
 # smart cameras
 def send_request():
@@ -182,6 +150,7 @@ def send_request():
     dist.send(tensor=request, dst=0, tag=SCHEDULE_TAG_2)
     p_tag = torch.empty(2, dtype=torch.int32)
     dist.recv(tensor=p_tag, src=0, tag=SCHEDULE_TAG_2)
+    # print("p_tag", p_tag[0].item())
     return p_tag[0].item()
 
 # edge server
@@ -191,5 +160,5 @@ def recv_request(p_tag):
     tag_tensor = torch.empty(2, dtype=torch.int32)
     tag_tensor[0] = p_tag
     dist.send(tensor=tag_tensor, dst=src, tag=SCHEDULE_TAG_2)
-    print("p_tag", tag_tensor)
+    # print("p_tag", tag_tensor)
     return src

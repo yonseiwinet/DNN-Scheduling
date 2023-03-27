@@ -1,11 +1,12 @@
 from common import *
 from models import AlexNet
+import random
 import cv2
 import logging
 
 
 
-def data_generator(args, send_data_list, send_data_lock):
+def data_generator(args, send_data_queue, send_data_lock):
     # video data load
     vid = cv2.VideoCapture(args.data_path+args.video_name)
     fps = vid.get(cv2.CAP_PROP_FPS)
@@ -26,7 +27,6 @@ def data_generator(args, send_data_list, send_data_lock):
             continue
         
         frame = cv2.resize(frame, args.resolution, interpolation=cv2.INTER_CUBIC)
-        """
         detected = False
 
         # # calculate the foreground mask
@@ -58,14 +58,14 @@ def data_generator(args, send_data_list, send_data_lock):
             foregroundPart = cv2.bitwise_and(frame, frame, mask=foreground_mask)
             cv2.imshow('foregroundPart', foregroundPart)
             cv2.imshow('boxedFrame', boxedFrame)
-        """
+        
         # send image info to the master and recv scheduling decision
         p_tag = send_request()
-        #print("data_generator : wait send data lock")
         with send_data_lock:
-            send_data_list.append((p_tag, num_pieces, transform(frame).unsqueeze(0)))
-        #print("data_generator : done send data lock")
-        time.sleep(1)
+            send_data_queue.put((p_tag-1, num_pieces, transform(frame).unsqueeze(0)))
+            print("send data", p_tag-1)
+            p_tag += num_partitions + 3
+        time.sleep(random.random()*5)
 
         if cv2.waitKey(delay) == ord('q'):
             break
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     _stop_event = threading.Event()
     recv_data_queue = queue.PriorityQueue()
     recv_data_lock = threading.Lock()
-    send_data_list = []
+    send_data_queue = queue.PriorityQueue()
     send_data_lock = threading.Lock()
     internal_data_list = []
     internal_data_lock = threading.Lock()
@@ -120,13 +120,13 @@ if __name__ == "__main__":
     proc_schedule_list = []
     proc_schedule_lock = threading.Lock()
 
-    threading.Thread(target=data_generator, args=(args, send_data_list, send_data_lock)).start()
+    threading.Thread(target=data_generator, args=(args, send_data_queue, send_data_lock)).start()
     threading.Thread(target=recv_schedule_thread, args=(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event)).start()
     threading.Thread(target=recv_thread, args=(args.rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
-    threading.Thread(target=send_thread, args=(args.rank, send_schedule_list, send_schedule_lock, send_data_list, send_data_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
+    threading.Thread(target=send_thread, args=(args.rank, send_schedule_list, send_schedule_lock, send_data_queue, send_data_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
     while _stop_event.is_set() == False:
         inputs, layer_id, p_id, num_outputs = bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event)
         outputs = model(inputs, layer_id)
         print(":::::outputs", outputs.shape, layer_id)
         with send_data_lock:
-            send_data_list.append((p_id, num_outputs, outputs))
+            send_data_queue.put((p_id, num_outputs, outputs))
