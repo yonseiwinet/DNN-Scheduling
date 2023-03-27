@@ -86,8 +86,6 @@ class HEFT:
         x = np.array(x, dtype=np.int32)
         y = np.array(y, dtype=np.int32)
         self.system_manager.set_env(deployed_server=x[0], execution_order=y[0])
-        print(self.server_lst)
-        print(x)
         return ((x, y), [np.max(self.system_manager.total_time_dp())], time.time() - timer)
 
 
