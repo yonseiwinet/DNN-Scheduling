@@ -89,6 +89,7 @@ class HEFT:
             # self.system_manager.after_timeslot(deployed_server=x[t], execution_order=y[t], timeslot=t)
         self.system_manager.set_servers_end_time(timer)
         self.system_manager.print_endtime(self.server_lst)
+        self.system_manager.print_partition_delay()
         x = np.array(x, dtype=np.int32)
         y = np.array(y, dtype=np.int32)
         self.system_manager.set_env(deployed_server=x[0], execution_order=y[0])
