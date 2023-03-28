@@ -248,7 +248,7 @@ class SystemManager():
 
     def print_partition_delay(self):
         for p_id in range(self.num_partitions):
-            print("partition %d took %f"(p_id, self.finish_time[p_id]))
+            print("partition %d took %f"%(p_id, self.finish_time[p_id]))
 
     def set_servers(self, request, local, edge, cloud):
         self.request = request
