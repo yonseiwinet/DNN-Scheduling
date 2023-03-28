@@ -3,17 +3,17 @@ import random
 random_device = False
 
 request_device_info = [
-    # {
-    #     'device_name':'Raspberry Pi 4B',
-    #     'computing_intensity':[615, 1568, 600, 615, 1568, 600, 615, 1568, 600, 615, 1568, 600, 615, 1568, 600], # AlexNet, GoogLeNet, ResNet-50
-    #     'computing_frequency':1.5 * (10**12),
-    #     'memory':2 * 1024 * 1024 * 1024, # Byte
-    #     'max_energy':20,
-    #     'cur_energy':20,
-    #     'min_energy_consumption':5,
-    #     'max_energy_consumption':10,
-    #     'is_request_device':True,
-    # },
+    {
+        'device_name':'Raspberry Pi 4B',
+        'computing_intensity':[615, 1568, 600, 615, 1568, 600, 615, 1568, 600, 615, 1568, 600, 615, 1568, 600], # AlexNet, GoogLeNet, ResNet-50
+        'computing_frequency':1.5 * (10**12),
+        'memory':2 * 1024 * 1024 * 1024, # Byte
+        'max_energy':20,
+        'cur_energy':20,
+        'min_energy_consumption':5,
+        'max_energy_consumption':10,
+        'is_request_device':True,
+    },
     {
         'device_name':'Jetson TX2',
         'computing_intensity':[301, 772, 300, 301, 772, 300, 301, 772, 300, 301, 772, 300, 301, 772, 300], # AlexNet, GoogLeNet, ResNet-50
@@ -61,28 +61,28 @@ request_device_info = [
 ]
 
 local_device_info = [
-    # {
-    #     'device_name':'Raspberry Pi 4B',
-    #     'computing_intensity':[615, 1568, 600, 615, 1568, 600, 615, 1568, 600, 615, 1568, 600, 615, 1568, 600], # AlexNet, GoogLeNet, ResNet-50
-    #     'computing_frequency':1.5 * (10**12),
-    #     'memory':2 * 1024 * 1024 * 1024, # Byte
-    #     'max_energy':20,
-    #     'cur_energy':20,
-    #     'min_energy_consumption':5,
-    #     'max_energy_consumption':10,
-    #     'is_request_device':False,
-    # },
-    # {
-    #     'device_name':'Jetson TX2',
-    #     'computing_intensity':[301, 772, 300, 301, 772, 300, 301, 772, 300, 301, 772, 300, 301, 772, 300], # AlexNet, GoogLeNet, ResNet-50
-    #     'computing_frequency':2 * (10**12),
-    #     'memory':8 * 1024 * 1024 * 1024, # Byte
-    #     'max_energy':30,
-    #     'cur_energy':30,
-    #     'min_energy_consumption':7.5,
-    #     'max_energy_consumption':15,
-    #     'is_request_device':False,
-    # },
+    {
+        'device_name':'Raspberry Pi 4B',
+        'computing_intensity':[615, 1568, 600, 615, 1568, 600, 615, 1568, 600, 615, 1568, 600, 615, 1568, 600], # AlexNet, GoogLeNet, ResNet-50
+        'computing_frequency':1.5 * (10**12),
+        'memory':2 * 1024 * 1024 * 1024, # Byte
+        'max_energy':20,
+        'cur_energy':20,
+        'min_energy_consumption':5,
+        'max_energy_consumption':10,
+        'is_request_device':False,
+    },
+    {
+        'device_name':'Jetson TX2',
+        'computing_intensity':[301, 772, 300, 301, 772, 300, 301, 772, 300, 301, 772, 300, 301, 772, 300], # AlexNet, GoogLeNet, ResNet-50
+        'computing_frequency':2 * (10**12),
+        'memory':8 * 1024 * 1024 * 1024, # Byte
+        'max_energy':30,
+        'cur_energy':30,
+        'min_energy_consumption':7.5,
+        'max_energy_consumption':15,
+        'is_request_device':False,
+    },
 ]
 
 edge_server_info = [
@@ -100,17 +100,17 @@ edge_server_info = [
 ]
 
 cloud_server_info = [
-    {
-        'device_name':'Cloud Server',
-        'computing_intensity':[282, 698, 280, 282, 698, 280, 282, 698, 280, 282, 698, 280, 282, 698, 280], # AlexNet, GoogLeNet, ResNet-50
-        'computing_frequency':100 * (10**12),
-        'memory':24 * 1024 * 1024 * 1024, # Byte
-        'max_energy':300,
-        'cur_energy':300,
-        'min_energy_consumption':80,
-        'max_energy_consumption':200,
-        'is_request_device':False,
-    },
+    # {
+    #     'device_name':'Cloud Server',
+    #     'computing_intensity':[282, 698, 280, 282, 698, 280, 282, 698, 280, 282, 698, 280, 282, 698, 280], # AlexNet, GoogLeNet, ResNet-50
+    #     'computing_frequency':100 * (10**12),
+    #     'memory':24 * 1024 * 1024 * 1024, # Byte
+    #     'max_energy':300,
+    #     'cur_energy':300,
+    #     'min_energy_consumption':80,
+    #     'max_energy_consumption':200,
+    #     'is_request_device':False,
+    # },
 ]
 
 service_info = [

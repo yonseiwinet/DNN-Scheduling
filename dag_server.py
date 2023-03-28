@@ -44,6 +44,7 @@ class NetworkManager:  # managing data transfer
         elif receiver in self.edge:
             return amount / self.B_edge_up
         else:
+            print('bandwidth table size: ',self.B_dd)
             return amount / self.B_dd[sender, receiver]
 
     def cal_b_dd(self):
