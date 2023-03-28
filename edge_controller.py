@@ -79,7 +79,6 @@ def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_s
                 tag += 1
         p_tag += num_partitions + 3
         print("scheduling took", time.time() - start)
-        print("theoretical e2e delay: ", took)
 
 
 if __name__ == "__main__":
