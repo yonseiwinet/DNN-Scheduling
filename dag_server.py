@@ -244,7 +244,10 @@ class SystemManager():
     ## for debug
     def print_endtime(self, server_lst, timer):
         for s in server_lst:
-            print(s," end time : ",self.server[s].endtime-timer)
+            if self.server[s].endtime-timer > 0:
+                print(s," end time : ",self.server[s].endtime-timer)
+            else:
+                print(s," end time : not utilized")
 
     def print_partition_delay(self):
         for p_id in range(self.num_partitions):
