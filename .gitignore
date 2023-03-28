@@ -156,6 +156,7 @@ runs/
 *.pth
 *.bin
 *.json
+*.pdf
 !svc_save.bin
 rewards_lstm.npy
 *.png

@@ -224,7 +224,7 @@ class SystemManager():
     def get_completion_time_partition(self, p_id, timer):
         num_partitions = len(self.service_set.partitions)
         self.init_times(num_partitions)
-        current_time = timer
+        current_time = time.time()
         self.finish_time[p_id] = max(0,self.server[self.deployed_server[p_id]].endtime-current_time)
         self.ready_time[p_id] = max(0,self.server[self.deployed_server[p_id]].endtime-current_time)
         self.set_ready_time(p_id)
