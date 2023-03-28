@@ -242,9 +242,9 @@ class SystemManager():
             print("workload remain before scheduling for {} : {} sec".format(s_id,workloads[i]))
         
     ## for debug
-    def print_endtime(self, server_lst):
+    def print_endtime(self, server_lst, timer):
         for s in server_lst:
-            print(s," end time : ",self.server[s].endtime)
+            print(s," end time : ",self.server[s].endtime-timer)
 
     def print_partition_delay(self):
         for p_id in range(self.num_partitions):
