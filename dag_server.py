@@ -248,7 +248,7 @@ class SystemManager():
                 print(s," end time : ",self.server[s].endtime-timer)
             else:
                 print(s," end time : not utilized")
-        print("Total Delay: %f"%(max([server.endtime for server in self.server])-timer))
+        print("Total Delay: %f"%(max([self.server[s_id].endtime for s_id in self.server])-timer))
 
     def print_partition_delay(self):
         for p_id in range(self.num_partitions):
