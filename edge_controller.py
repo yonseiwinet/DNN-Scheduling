@@ -6,6 +6,54 @@ from algorithms.Greedy import HEFT, CPOP, E_HEFT, Greedy
 
 server_mapping = None
 
+def send_schedule_thread(server, order, latency, took, tag, p_tag, partitions, dataset, input_src):
+    for p_id in order:
+            p = partitions[p_id]
+            # p가 받아야할 input 데이터들에 대해서
+            for i, (pred, slicing_index) in enumerate(p.input_slicing.items()):
+                if i == 0:
+                    proc_flag = True
+                else:
+                    proc_flag = False
+                if pred == 'input':
+                    src = input_src
+                    pred_id = -1
+                else:
+                    src = server[next(i for i, l in enumerate(partitions) if l.layer_name == pred)]
+                    pred_id = next(i for i, l in enumerate(partitions) if l.layer_name == pred)
+                    # print("pred id : ",pred_id, "p tag : ",p_tag, "i : ", i)
+                dst = server[p_id]
+                schedule = torch.tensor([dataset.partition_layer_map[p_id], len(p.input_slicing), len(p.successors), p_tag+pred_id, p_tag+p_id, src, dst, p.input_height, p.input_width, p.input_channel, slicing_index[0], slicing_index[1], tag, proc_flag], dtype=torch.int32)
+                #print("schedule", schedule, pred_id, p_id)
+                # dst는 데이터를 받는 역할을 함
+                # 데이터의 dst에 스케줄 보냄
+                if dst == 0:
+                    if schedule[13] == True:
+                        with proc_schedule_lock:
+                            proc_schedule_list.append(schedule)
+                    schedule[5] = src
+                    schedule[6] = -1
+                    with recv_schedule_lock:
+                        recv_schedule_list.append(schedule.clone())
+                else:
+                    schedule[5] = src
+                    schedule[6] = -1
+                    send_schedule(schedule=schedule.clone(), dst=dst)
+                # src는 데이터를 보내는 역할을 함
+                # 데이터의 src에 스케줄 보냄
+                if src == 0:
+                    schedule[5] = -1
+                    schedule[6] = dst
+                    with send_schedule_lock:
+                        send_schedule_list.append(schedule.clone())
+                else:
+                    schedule[5] = -1
+                    schedule[6] = dst
+                    send_schedule(schedule=schedule.clone(), dst=src)
+
+                del schedule
+                tag += 1
+        p_tag += num_partitions + 3
 
 def scheduler(algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event):
     try:
@@ -18,6 +66,7 @@ def scheduler(algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_l
         with open("net_manager_backup", "wb") as fp:
             pickle.dump(dataset.system_manager.net_manager, fp)
     num_servers = args.num_servers
+    print("Scheduling Algorithm : ",algorithm)
     if algorithm == 'HEFT':
         algorithm = HEFT(dataset=dataset)
     if algorithm == 'CPOP':
@@ -36,6 +85,7 @@ def scheduler(algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_l
         (([server], [order]), [latency], took) = algorithm.run_algo()
         # partition p를 순서대로
         start = time.time()
+        print(len(order),len(p.input_slicing.items()), tag)
         for p_id in order:
             p = partitions[p_id]
             # p가 받아야할 input 데이터들에 대해서
@@ -82,6 +132,7 @@ def scheduler(algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_l
 
                 del schedule
                 tag += 1
+        print(tag)
         p_tag += num_partitions + 3
         print("scheduling took", time.time() - start)
 
