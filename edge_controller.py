@@ -1,13 +1,13 @@
 from common import *
 from models import AlexNet
 from dag_data_generator import DAGDataSet
-from algorithms.Greedy import HEFT, Greedy
+from algorithms.Greedy import HEFT, CPOP, E_HEFT, Greedy
 
 
 server_mapping = None
 
 
-def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event):
+def scheduler(algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event):
     try:
         with open("net_manager_backup", "rb") as fp:
             net_manager = pickle.load(fp)
@@ -18,7 +18,12 @@ def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_s
         with open("net_manager_backup", "wb") as fp:
             pickle.dump(dataset.system_manager.net_manager, fp)
     num_servers = args.num_servers
-    algorithm = HEFT(dataset=dataset)
+    if algorithm == 'HEFT':
+        algorithm = HEFT(dataset=dataset)
+    if algorithm == 'CPOP':
+        algorithm = CPOP(dataset=dataset)
+    if algorithm == 'E_HEFT':
+        algorithm = E_HEFT(dataset=dataset)
     algorithm.rank = "rank_u"
     algorithm.server_lst = list(dataset.system_manager.edge.keys()) + list(dataset.system_manager.request.keys())
     tag = 1
@@ -83,6 +88,7 @@ def scheduler(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_s
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Piecewise Partition and Scheduling')
+    parser.add_argument('--algorithm', default='HEFT', choices=['HEFT', 'CPOP', 'E-HEFT'], help='algorithm used for scheduling')
     parser.add_argument('--vram_limit', default=0.2, type=float, help='GPU memory limit')
     parser.add_argument('--master_addr', default='localhost', type=str, help='Master node ip address')
     parser.add_argument('--master_port', default='30000', type=str, help='Master node port')
@@ -126,7 +132,7 @@ if __name__ == "__main__":
     proc_schedule_list = []
     proc_schedule_lock = threading.Lock()
 
-    threading.Thread(target=scheduler, args=(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event)).start()
+    threading.Thread(target=scheduler, args=(args.algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event)).start()
     threading.Thread(target=recv_thread, args=(args.rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
     threading.Thread(target=send_thread, args=(args.rank, send_schedule_list, send_schedule_lock, send_data_queue, send_data_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
     while _stop_event.is_set() == False:
