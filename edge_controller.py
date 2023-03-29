@@ -141,6 +141,19 @@ def scheduler(algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_l
         print("Scheduling end time : ",time.time())
         print("scheduling took", time.time() - start)
 
+def calc_model(input_lock, input_queue, send_data_lock, send_data_queue):
+    while _stop_event.is_set() == False:
+        if not input_queue.empty():
+            with input_lock:
+                inputs, layer_id, p_id, num_outputs = input_queue.get()
+            outputs = model(inputs, layer_id)
+            print(":::::outputs", outputs.shape, layer_id, num_outputs)
+            with send_data_lock:
+                send_data_queue.put((p_id, num_outputs, outputs))
+        else:
+            sleep(0.001)
+    
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Piecewise Partition and Scheduling')
@@ -177,8 +190,8 @@ if __name__ == "__main__":
     _stop_event = threading.Event()
     recv_data_queue = queue.PriorityQueue()
     recv_data_lock = threading.Lock()
-    send_data_queue = queue.PriorityQueue()
-    send_data_lock = threading.Lock()
+    send_data_queue = mp.PriorityQueue()
+    send_data_lock = mp.Lock()
     internal_data_list = []
     internal_data_lock = threading.Lock()
     send_schedule_list = []
@@ -191,9 +204,20 @@ if __name__ == "__main__":
     threading.Thread(target=scheduler, args=(args.algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event)).start()
     threading.Thread(target=recv_thread, args=(args.rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
     threading.Thread(target=send_thread, args=(args.rank, send_schedule_list, send_schedule_lock, send_data_queue, send_data_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
+    
+    # for multiprocessing
+    input_lock = mp.Lock()
+    input_queue = mp.Queue()
+    output_lock = mp.Lock()
+    output_queue = mp.Queue()
+    model_processes = [mp.Process(target=calc_model,args=(input_lock,input_queue,output_lock,output_queue,send_data_lock,send_data_queue)) for p in range(3)]
+    for p in model_processes:
+        p.start()
+    
     while _stop_event.is_set() == False:
         inputs, layer_id, p_id, num_outputs = bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event)
-        outputs = model(inputs, layer_id)
-        print(":::::outputs", outputs.shape, layer_id, num_outputs)
-        with send_data_lock:
-            send_data_queue.put((p_id, num_outputs, outputs))
+        with input_lock:
+            input_queue.put([inputs,layer_id,p_id,num_outputs])
+
+    for p in model_processes:
+        p.join()
