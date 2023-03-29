@@ -84,9 +84,10 @@ def scheduler(algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_l
         (([server], [order]), [latency], took) = algorithm.run_algo()
         # partition p를 순서대로
         start = time.time()
-        print(len(order),len(p.input_slicing.items()), tag)
+        print(len(order), tag)
         for p_id in order:
             p = partitions[p_id]
+            print("input slicing : ",len(p.input_slicing.items()))
             # p가 받아야할 input 데이터들에 대해서
             for i, (pred, slicing_index) in enumerate(p.input_slicing.items()):
                 if i == 0:
