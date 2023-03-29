@@ -6,7 +6,7 @@ from algorithms.Greedy import HEFT, CPOP, E_HEFT, Greedy
 
 server_mapping = None
 
-def send_schedule_thread(server, order, latency, took, tag, p_tag, partitions, dataset, input_src):
+def send_schedule_thread(server, order, tag, p_tag, partitions, dataset, input_src, proc_schedule_list, recv_schedule_list, send_schedule_list, proc_schedule_lock, recv_schedule_lock, send_schedule_lock):
     for p_id in order:
         p = partitions[p_id]
         # p가 받아야할 input 데이터들에 대해서
@@ -84,10 +84,13 @@ def scheduler(algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_l
         (([server], [order]), [latency], took) = algorithm.run_algo()
         # partition p를 순서대로
         start = time.time()
-        print(len(order), tag)
+
+        threading.Thread(target=send_schedule_thread,args=(server,order,tag,p_tag,partitions, dataset, input_src, proc_schedule_list, recv_schedule_list, send_schedule_list, proc_schedule_lock, recv_schedule_lock, send_schedule_lock)).start()
+        for p_id in order:
+            tag += len(partitions[p_id].input_slicing.items())
+        """
         for p_id in order:
             p = partitions[p_id]
-            print("input slicing : ",len(p.input_slicing.items()))
             # p가 받아야할 input 데이터들에 대해서
             for i, (pred, slicing_index) in enumerate(p.input_slicing.items()):
                 if i == 0:
@@ -132,7 +135,7 @@ def scheduler(algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_l
 
                 del schedule
                 tag += 1
-        print(tag)
+        """
         p_tag += num_partitions + 3
         print("scheduling took", time.time() - start)
 
