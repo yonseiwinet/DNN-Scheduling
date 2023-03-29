@@ -81,6 +81,7 @@ def scheduler(algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_l
         # request를 반복적으로 받음
         input_src = recv_request(p_tag)
         # scheduling 수행
+        print("Scheduling start time : ",time.time())
         (([server], [order]), [latency], took) = algorithm.run_algo()
         # partition p를 순서대로
         start = time.time()
@@ -137,6 +138,7 @@ def scheduler(algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_l
                 tag += 1
         """
         p_tag += num_partitions + 3
+        print("Scheduling end time : ",time.time())
         print("scheduling took", time.time() - start)
 
 
