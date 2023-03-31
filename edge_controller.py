@@ -86,6 +86,7 @@ def scheduler(algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_l
         (([server], [order]), [latency], took) = algorithm.run_algo()
         # partition p를 순서대로
         start = time.time()
+
         print(server)
         threading.Thread(target=send_schedule_thread,args=(server,order,tag,p_tag,partitions, dataset, input_src, proc_schedule_list, recv_schedule_list, send_schedule_list, proc_schedule_lock, recv_schedule_lock, send_schedule_lock)).start()
         for p_id in order:
@@ -158,6 +159,7 @@ if __name__ == "__main__":
     recv_schedule_lock = threading.Lock()
     proc_schedule_list = []
     proc_schedule_lock = threading.Lock()
+
     # for multiprocessing
     input_lock = mp.Lock()
     input_queue = mp.Queue()
@@ -171,7 +173,7 @@ if __name__ == "__main__":
     threading.Thread(target=scheduler, args=(args.algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event)).start()
     threading.Thread(target=recv_thread, args=(args.rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
     threading.Thread(target=send_thread, args=(args.rank, send_schedule_list, send_schedule_lock, output_queue, output_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
-    #threading.Thread(target=q2pq, args=(output_lock,output_queue,send_data_lock,send_data_queue)).start()
+
     
     """
     while _stop_event.is_set() == False:
