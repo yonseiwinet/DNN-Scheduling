@@ -46,6 +46,7 @@ def bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedul
                     time.sleep(0.001) # wait for data recv
                 with recv_data_lock:
                     tag, data, job = recv_data_queue.get()
+                #print("(bring data)",tag)
                 # print("p_id", p_id, "src", src, "tag", tag, data.shape, num_inputs)
                 # we calculate the schedule in order of p_id and tag, we can just merge in numeric order
                 tag += 1
@@ -53,6 +54,7 @@ def bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedul
                 # print("(bring data)", tag, "wait")
                 if job != None:
                     job.join()
+            #print("(bring data) ",src,tag)
             # print(layer_id.item(), [d.shape for d in data_list])
             # print(torch.cat(data_list, dim=-1).shape)
             return torch.cat(data_list, dim=-1), layer_id, p_id, num_outputs
@@ -85,7 +87,7 @@ def recv_thread(rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, r
                     job = threading.Thread(target=dist.recv, kwargs={"tensor":data, "src":src, "tag":tag})
                     job.start()
                     recv_data_queue.put([tag, data, job])
-            #         print("(recv_thread) ", tag, data.shape)
+                #print("(recv_thread) ", data.shape, tag, src)
             # print("recv_thread recv_data_lock done")
         else:
             time.sleep(0.001)
@@ -105,6 +107,7 @@ def send_thread(rank, send_schedule_list, send_schedule_lock, send_data_queue, s
                     if idx != None:
                         break
                     else:
+                        #print("(send thread) block in pred_id matching ",pred_id, len(send_schedule_list))
                         time.sleep(0.001)
                 # send_schedule중에 pred_id가 동일한거만 꺼냄
                 with send_schedule_lock:
@@ -116,7 +119,7 @@ def send_thread(rank, send_schedule_list, send_schedule_lock, send_data_queue, s
                     data = outputs[:,:,:,slicing_index[0]:slicing_index[1]].contiguous()
                 elif outputs.dim() == 2:
                     data = outputs[:,slicing_index[0]:slicing_index[1]].contiguous()
-                # print("(send_thread) ", data.shape, tag, dst, len(send_data_queue))
+                #print("(send_thread) ", data.shape, tag, dst, send_data_queue.qsize())
                 if dst == rank: # send/isend는 자기자신에게 보낼경우 segfault남.
                     with internal_data_lock:
                         internal_data_list.append((tag, data))
@@ -130,6 +133,7 @@ def recv_schedule_thread(recv_schedule_list, recv_schedule_lock, send_schedule_l
     while _stop_event.is_set() == False:
         schedule = torch.empty(len(schedule_shape), dtype=torch.int32)
         dist.recv(tensor=schedule, src=0, tag=SCHEDULE_TAG)
+        #print("recv schedule thread) ",schedule)
         if schedule[5] >= 0:
             if schedule[13] == True:
                 with proc_schedule_lock:
