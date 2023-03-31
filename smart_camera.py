@@ -101,7 +101,7 @@ if __name__ == "__main__":
     parser.add_argument('--video_name', default='vdo.avi', type=str, help='Video file name')
     parser.add_argument('--roi_name', default='roi.jpg', type=str, help='RoI file name')
     parser.add_argument('--num_nodes', default=5, type=int, help='Number of nodes')
-    parser.add_argument('--num_servers', default=4, type=int, help='Number of jetson servers')
+    parser.add_argument('--num_servers', default=1, type=int, help='Number of jetson servers')
     parser.add_argument('--resolution', default=(854, 480), type=tuple, help='Image resolution')
     parser.add_argument('--verbose', default=False, type=str2bool, help='If you want to print debug messages, set True')
     args = parser.parse_args()
@@ -159,11 +159,3 @@ if __name__ == "__main__":
 
     for p in model_processes:
         p.join()
-    """
-    while _stop_event.is_set() == False:
-        inputs, layer_id, p_id, num_outputs = bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event)
-        outputs = model(inputs, layer_id)
-        print(":::::outputs", outputs.shape, layer_id)
-        with send_data_lock:
-            send_data_queue.put((p_id, num_outputs, outputs))
-    """
