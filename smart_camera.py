@@ -73,6 +73,23 @@ def data_generator(args, send_data_queue, send_data_lock):
     vid.release()
     cv2.destroyAllWindows()
 
+def calc_model(input_lock, input_queue, output_lock, output_queue):
+    while _stop_event.is_set() == False:
+        #print("input q : ",input_queue.qsize())
+        inputs = None
+        with input_lock:
+            if input_queue.qsize()>0:
+                inputs, layer_id, p_id, num_outputs = input_queue.get()
+
+        if inputs != None:
+            outputs = model(inputs, layer_id)
+            outputs = outputs.detach()
+            print(":::::outputs", outputs.shape, layer_id, num_outputs)
+            with output_lock:
+                output_queue.put((p_id, num_outputs, outputs))
+        else:
+            time.sleep(0.001)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Piecewise Partition and Scheduling')
@@ -84,7 +101,7 @@ if __name__ == "__main__":
     parser.add_argument('--video_name', default='vdo.avi', type=str, help='Video file name')
     parser.add_argument('--roi_name', default='roi.jpg', type=str, help='RoI file name')
     parser.add_argument('--num_nodes', default=5, type=int, help='Number of nodes')
-    parser.add_argument('--num_servers', default=4, type=int, help='Number of jetson servers')
+    parser.add_argument('--num_servers', default=1, type=int, help='Number of jetson servers')
     parser.add_argument('--resolution', default=(854, 480), type=tuple, help='Image resolution')
     parser.add_argument('--verbose', default=False, type=str2bool, help='If you want to print debug messages, set True')
     args = parser.parse_args()
@@ -109,8 +126,8 @@ if __name__ == "__main__":
     _stop_event = threading.Event()
     recv_data_queue = queue.PriorityQueue()
     recv_data_lock = threading.Lock()
-    send_data_queue = queue.PriorityQueue()
-    send_data_lock = threading.Lock()
+    #send_data_queue = queue.PriorityQueue()
+    #send_data_lock = threading.Lock()
     internal_data_list = []
     internal_data_lock = threading.Lock()
     send_schedule_list = []
@@ -119,14 +136,26 @@ if __name__ == "__main__":
     recv_schedule_lock = threading.Lock()
     proc_schedule_list = []
     proc_schedule_lock = threading.Lock()
+    # for multiprocessing
+    input_lock = mp.Lock()
+    input_queue = mp.Queue()
+    send_data_lock = mp.Lock()
+    send_data_queue = mp.Queue()
+
+    model_processes = [mp.Process(target=calc_model,args=(input_lock,input_queue,send_data_lock,send_data_queue)) for p in range(3)]
+    for p in model_processes:
+        p.start()
 
     threading.Thread(target=data_generator, args=(args, send_data_queue, send_data_lock)).start()
     threading.Thread(target=recv_schedule_thread, args=(recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event)).start()
     threading.Thread(target=recv_thread, args=(args.rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
     threading.Thread(target=send_thread, args=(args.rank, send_schedule_list, send_schedule_lock, send_data_queue, send_data_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
+    
     while _stop_event.is_set() == False:
         inputs, layer_id, p_id, num_outputs = bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event)
-        outputs = model(inputs, layer_id)
-        print(":::::outputs", outputs.shape, layer_id)
-        with send_data_lock:
-            send_data_queue.put((p_id, num_outputs, outputs))
+        with input_lock:
+            input_queue.put([inputs, layer_id, p_id, num_outputs])
+
+
+    for p in model_processes:
+        p.join()
