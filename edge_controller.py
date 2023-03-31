@@ -73,7 +73,8 @@ def scheduler(algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_l
     if algorithm == 'E_HEFT':
         algorithm = E_HEFT(dataset=dataset)
     algorithm.rank = "rank_u"
-    algorithm.server_lst = list(dataset.system_manager.edge.keys()) + list(dataset.system_manager.request.keys())
+    algorithm.server_lst = list(dataset.system_manager.edge.keys()) + list(dataset.system_manager.request.keys())[:(args.num_nodes-1)]
+    print(algorithm.server_lst)
     tag = 1
     p_tag = 1
     partitions = dataset.system_manager.service_set.partitions
@@ -86,73 +87,31 @@ def scheduler(algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_l
         # partition p를 순서대로
         start = time.time()
 
-        #threading.Thread(target=send_schedule_thread,args=(server,order,tag,p_tag,partitions, dataset, input_src, proc_schedule_list, recv_schedule_list, send_schedule_list, proc_schedule_lock, recv_schedule_lock, send_schedule_lock)).start()
-        #for p_id in order:
-        #    tag += len(partitions[p_id].input_slicing.items())
-        
+        print(server)
+        threading.Thread(target=send_schedule_thread,args=(server,order,tag,p_tag,partitions, dataset, input_src, proc_schedule_list, recv_schedule_list, send_schedule_list, proc_schedule_lock, recv_schedule_lock, send_schedule_lock)).start()
         for p_id in order:
-            p = partitions[p_id]
-            # p가 받아야할 input 데이터들에 대해서
-            for i, (pred, slicing_index) in enumerate(p.input_slicing.items()):
-                if i == 0:
-                    proc_flag = True
-                else:
-                    proc_flag = False
-                if pred == 'input':
-                    src = input_src
-                    pred_id = -1
-                else:
-                    src = server[next(i for i, l in enumerate(partitions) if l.layer_name == pred)]
-                    pred_id = next(i for i, l in enumerate(partitions) if l.layer_name == pred)
-                    # print("pred id : ",pred_id, "p tag : ",p_tag, "i : ", i)
-                dst = server[p_id]
-                schedule = torch.tensor([dataset.partition_layer_map[p_id], len(p.input_slicing), len(p.successors), p_tag+pred_id, p_tag+p_id, src, dst, p.input_height, p.input_width, p.input_channel, slicing_index[0], slicing_index[1], tag, proc_flag], dtype=torch.int32)
-                #print("schedule", schedule, pred_id, p_id)
-                # dst는 데이터를 받는 역할을 함
-                # 데이터의 dst에 스케줄 보냄
-                if dst == 0:
-                    if schedule[13] == True:
-                        with proc_schedule_lock:
-                            proc_schedule_list.append(schedule)
-                    schedule[5] = src
-                    schedule[6] = -1
-                    with recv_schedule_lock:
-                        recv_schedule_list.append(schedule.clone())
-                else:
-                    schedule[5] = src
-                    schedule[6] = -1
-                    send_schedule(schedule=schedule.clone(), dst=dst)
-                # src는 데이터를 보내는 역할을 함
-                # 데이터의 src에 스케줄 보냄
-                if src == 0:
-                    schedule[5] = -1
-                    schedule[6] = dst
-                    with send_schedule_lock:
-                        send_schedule_list.append(schedule.clone())
-                else:
-                    schedule[5] = -1
-                    schedule[6] = dst
-                    send_schedule(schedule=schedule.clone(), dst=src)
+            tag += len(partitions[p_id].input_slicing.items())
 
-                del schedule
-                tag += 1
-        
         p_tag += num_partitions + 3
         print("Scheduling end time : ",time.time())
         print("scheduling took", time.time() - start)
 
-def calc_model(input_lock, input_queue, send_data_lock, send_data_queue):
+def calc_model(input_lock, input_queue, output_lock, output_queue):
     while _stop_event.is_set() == False:
-        if not input_queue.empty():
-            with input_lock:
+        #print("input q : ",input_queue.qsize())
+        inputs = None
+        with input_lock:
+            if input_queue.qsize()>0:
                 inputs, layer_id, p_id, num_outputs = input_queue.get()
+
+        if inputs != None:
             outputs = model(inputs, layer_id)
+            outputs = outputs.detach()
             print(":::::outputs", outputs.shape, layer_id, num_outputs)
-            with send_data_lock:
-                send_data_queue.put((p_id, num_outputs, outputs))
+            with output_lock:
+                output_queue.put((p_id, num_outputs, outputs))
         else:
-            sleep(0.001)
-    
+            time.sleep(0.001)
 
 
 if __name__ == "__main__":
@@ -201,14 +160,35 @@ if __name__ == "__main__":
     proc_schedule_list = []
     proc_schedule_lock = threading.Lock()
 
+    # for multiprocessing
+    input_lock = mp.Lock()
+    input_queue = mp.Queue()
+    output_lock = mp.Lock()
+    output_queue = mp.Queue()
+
+    model_processes = [mp.Process(target=calc_model,args=(input_lock,input_queue,output_lock,output_queue)) for p in range(3)]
+    for p in model_processes:
+        p.start()
+
     threading.Thread(target=scheduler, args=(args.algorithm, recv_schedule_list, recv_schedule_lock, send_schedule_list, send_schedule_lock, proc_schedule_list, proc_schedule_lock, _stop_event)).start()
     threading.Thread(target=recv_thread, args=(args.rank, recv_schedule_list, recv_schedule_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
-    threading.Thread(target=send_thread, args=(args.rank, send_schedule_list, send_schedule_lock, send_data_queue, send_data_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
+    threading.Thread(target=send_thread, args=(args.rank, send_schedule_list, send_schedule_lock, output_queue, output_lock, recv_data_queue, recv_data_lock, internal_data_list, internal_data_lock, _stop_event)).start()
+
     
-    
+    """
     while _stop_event.is_set() == False:
         inputs, layer_id, p_id, num_outputs = bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event)
         outputs = model(inputs, layer_id)
-        print(":::::outputs", outputs.shape, layer_id, num_outputs)
+        print(":::::outputs", outputs.shape, layer_id)
         with send_data_lock:
             send_data_queue.put((p_id, num_outputs, outputs))
+    """
+    while _stop_event.is_set() == False:
+        inputs, layer_id, p_id, num_outputs = bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event)
+        with input_lock:
+            input_queue.put([inputs, layer_id, p_id, num_outputs])
+
+
+    for p in model_processes:
+        p.join()
+    

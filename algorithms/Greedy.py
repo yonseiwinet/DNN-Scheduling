@@ -58,7 +58,7 @@ class HEFT:
 
         #print(timer)
         #for s_id in self.server_lst:
-        #    print(self.system_manager.server[s_id].endtime)
+        #    print("b server end time : ",s_id,self.system_manager.server[s_id].endtime)
         # scheduling
         self.system_manager.init_env()
         for t in range(self.num_timeslots):
@@ -88,8 +88,8 @@ class HEFT:
             self.system_manager.set_env(deployed_server=x[t], execution_order=y[t])
             # self.system_manager.after_timeslot(deployed_server=x[t], execution_order=y[t], timeslot=t)
         self.system_manager.set_servers_end_time(timer)
-        self.system_manager.print_endtime(self.server_lst, timer)
-        self.system_manager.print_partition_delay()
+        #self.system_manager.print_endtime(self.server_lst, timer)
+        #self.system_manager.print_partition_delay()
         x = np.array(x, dtype=np.int32)
         y = np.array(y, dtype=np.int32)
         self.system_manager.set_env(deployed_server=x[0], execution_order=y[0])
