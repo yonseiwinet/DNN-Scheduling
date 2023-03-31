@@ -176,13 +176,6 @@ if __name__ == "__main__":
     
     while _stop_event.is_set() == False:
         inputs, layer_id, p_id, num_outputs = bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event)
-        outputs = model(inputs, layer_id)
-        print(":::::outputs", outputs.shape, layer_id)
-        with send_data_lock:
-            send_data_queue.put((p_id, num_outputs, outputs))
-    """
-    while _stop_event.is_set() == False:
-        inputs, layer_id, p_id, num_outputs = bring_data(recv_data_queue, recv_data_lock, proc_schedule_list, proc_schedule_lock, _stop_event)
         with input_lock:
             input_queue.put([inputs, layer_id, p_id, num_outputs])
 
