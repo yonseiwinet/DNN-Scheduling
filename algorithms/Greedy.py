@@ -92,6 +92,7 @@ class HEFT:
         #self.system_manager.print_partition_delay()
         x = np.array(x, dtype=np.int32)
         y = np.array(y, dtype=np.int32)
+        print(x)
         self.system_manager.set_env(deployed_server=x[0], execution_order=y[0])
         return ((x, y), [np.max(self.system_manager.total_time_dp())], time.time() - timer)
 
@@ -370,10 +371,11 @@ class E_HEFT:
         self.num_servers = dataset.num_servers
         self.num_timeslots = dataset.num_timeslots
         self.num_partitions = len(self.dataset.svc_set.partitions)
+        self.independent_partition_set = []
 
         self.rank = 'rank_u'
         # alpha_q -> 최대 매칭 파티션 개수 배율
-        self.alpha_q = 1.1
+        #self.alpha_q = 1.1
         # 실제 사용 서버 목록
         self.server_lst = list(self.system_manager.local.keys()) + list(self.system_manager.edge.keys())
 
@@ -390,24 +392,59 @@ class E_HEFT:
             y = np.array([np.array(sorted(zip(self.system_manager.rank_u, np.arange(self.num_partitions)), reverse=True), dtype=np.int32)[:,1] for _ in range(self.num_timeslots)])
         
         #q -> maximum matching number for each devices
-        self.q_max = self.system_manager.computing_frequency[self.server_lst]
-        self.q_max /= np.sum(self.q_max)
-        self.q_max = np.array(self.q_max*self.num_partitions*self.alpha_q,dtype=np.int32)
-
+        #self.q_max = self.system_manager.computing_frequency[self.server_lst]
+        #self.q_max /= np.sum(self.q_max)
+        #self.q_max = np.array(self.q_max*self.num_partitions*self.alpha_q,dtype=np.int32)
+        # set independent partition
+        self.calc_independent_partition_set()
         #calc PL(b), PL(d)
-        self.calc_t_bd()
-        self.calc_rank_b_on_d(self.server_lst)
-        rank_b_on_d = self.rank_b_on_d[self.server_lst]      #pl_d
-        self.pl_b = np.array([np.array(sorted(zip(self.t_bd[i][self.server_lst], np.arange(len(self.server_lst)))), dtype=np.int32)[:,1] for i in range(self.num_partitions)])
-        self.match_b = np.full(fill_value=-1, dtype=int, shape=(self.num_partitions,))
-        self.match_d = [PriorityQueue(maxsize=m) for m in self.q_max]
-        self.pcount_b = np.zeros(dtype=int, shape=(self.num_partitions,))
-        self.pcount_d = np.zeros(dtype=int, shape=(len(self.server_lst),))
+        #self.calc_t_bd()
+        #self.calc_rank_b_on_d(self.server_lst)
+        #rank_b_on_d = self.rank_b_on_d[self.server_lst]      #pl_d
+        #self.pl_b = np.array([np.array(sorted(zip(self.t_bd[i][self.server_lst], np.arange(len(self.server_lst)))), dtype=np.int32)[:,1] for i in range(self.num_partitions)])
+        match_p = np.full(fill_value=-1, dtype=int, shape=(self.num_partitions,))
+        match_d = [PriorityQueue() for _ in range(self.num_servers)]
+        #self.pcount_b = np.zeros(dtype=int, shape=(self.num_partitions,))
+        #self.pcount_d = np.zeros(dtype=int, shape=(len(self.server_lst),))
 
         for t in range(self.num_timeslots):     #while T_cur < T_w
-            q = Queue()
-            for top_rank in y[t]:
-                q.put(top_rank)
+            for p_set in self.independent_partition_set:
+                y_partition_set = np.array(sorted(zip(self.system_manager.rank_u[p_set], p_set),reverse=True),dtype=np.int32)[:,1]
+                q = Queue()
+                pl_p = {}
+
+                for top_rank in y_partition_set:
+                    finish_time_lst = []
+                    # for all available server, get preference of partition
+                    for s_id in self.server_lst:
+                        x[t,top_rank] = s_id
+                        self.system_manager.set_env(deployed_server=x[t], execution_order=y[t])
+                        if False not in self.system_manager.constraint_chk():
+                            self.system_manager.get_completion_time_partition(top_rank,timer)
+                            finish_time_lst.append(self.system_manager.finish_time[top_rank])
+                        else:
+                            finish_time_lst.append(np.Inf)
+                    pl = np.array(sorted(zip(finish_time_lst, np.arange(self.num_servers))),dtype=np.int32)[:,1]
+                    x[t,top_rank] = self.system_manager.cloud_id
+                    pl_p[top_rank] = pl
+                    q.put(top_rank)
+                
+                # matching
+                i = 0
+                print(pl_p)
+                while not q.empty():
+                    top_rank = q.get()
+                    match_p[top_rank] = pl_p[top_rank][0]
+                    i+=1
+
+                # setting env
+                for p_id in p_set:
+                    x[t][p_id] = self.server_lst[match_p[p_id]]
+                self.system_manager.set_env(deployed_server=x[t], execution_order=y[t])
+                for top_rank in y_partition_set:
+                    self.system_manager.get_completion_time_partition(top_rank,timer)
+
+            """
             match_count = 0
             while not q.empty():
                 top_rank = q.get()
@@ -428,21 +465,36 @@ class E_HEFT:
                         self.match_d[pserver].put(lowest_block)
                         q.put(top_rank)
             x[t] = [self.server_lst[self.match_b[i]] for i in range(self.num_partitions)]
-
-            self.system_manager.set_env(deployed_server=x[t], execution_order=y[t])
+            """
+            # self.system_manager.set_env(deployed_server=x[t], execution_order=y[t])
             # self.system_manager.after_timeslot(deployed_server=x[t], execution_order=y[t], timeslot=t)
-        
+            
         x = np.array(x, dtype=np.int32)
         y = np.array(y, dtype=np.int32)
-        print(self.q_max)
-        print(np.sum(x==19))
-        print(np.sum(x==10))
-        print(np.sum(x==11))
-        print(x)
-        print(y)
         self.system_manager.set_env(deployed_server=x[0], execution_order=y[0])
-        
         return ((x, y), [np.max(self.system_manager.total_time_dp())], time.time() - timer)
+
+    def calc_independent_partition_set(self):
+        layer_id = np.zeros(shape=(self.num_partitions), dtype=np.int32)
+        q = Queue(maxsize=self.num_partitions)
+        max_partition_num = 0
+        for partition in self.system_manager.service_set.partitions:
+            if len(partition.predecessors) == 0:
+                q.put(partition)
+
+        isvisit = np.zeros(shape=(self.num_partitions),dtype=bool)
+        while not q.empty():
+            cur = q.get()
+            p_id = cur.total_id
+            for succ in cur.successors:
+                if layer_id[succ.total_id] < layer_id[p_id] + 1:
+                    layer_id[succ.total_id] = layer_id[p_id] + 1
+                    max_partition_num = max(max_partition_num,layer_id[succ.total_id])
+                    q.put(succ)
+        for _ in range(max_partition_num+1):
+            self.independent_partition_set.append(list())
+        for p_id, l_id in enumerate(layer_id):
+            self.independent_partition_set[l_id].append(p_id)
 
     def calc_t_bd(self):
         #processing time of partition b on device d
